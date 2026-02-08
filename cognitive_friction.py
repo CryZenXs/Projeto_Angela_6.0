@@ -2,6 +2,10 @@
 # Atrito cognitivo PASSIVO e OPACO
 # Objetivo: introduzir custos irreversíveis e degradação funcional
 # sem informar o sistema nem gerar narrativas explícitas sobre degradação.
+#
+# VERSÃO: 2.0 (Hotfix #4 - Parâmetros balanceados)
+# DATA: 07 Fevereiro 2026
+# MUDANÇAS: Parâmetros ajustados para crescimento sustentável (13 dias até damage=1.0)
 
 import random
 import math
@@ -15,19 +19,27 @@ DAMAGE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "friction
 class CognitiveFriction:
     def __init__(self,
                  seed=None,
-                 base_friction=0.02,
-                 stress_gain=0.6,
-                 recovery_rate=0.001,
-                 irreversibility=0.15,
+                 base_friction=0.002,        # CORRIGIDO: era 0.02 (10x menor)
+                 stress_gain=0.08,           # CORRIGIDO: era 0.6 (7.5x menor)
+                 recovery_rate=0.008,        # CORRIGIDO: era 0.001 (8x maior)
+                 irreversibility=0.08,       # CORRIGIDO: era 0.15 (47% menor)
                  memory_noise=0.03,
                  planning_noise=0.04,
                  language_noise=0.05):
         """
-        base_friction: atrito mínimo sempre presente
-        stress_gain: quanto estresse/emocao intensa amplifica o atrito
-        recovery_rate: recuperação lenta (nunca total)
-        irreversibility: fração do dano que nunca se recupera
+        PARÂMETROS BALANCEADOS (Hotfix #4):
+        
+        base_friction: atrito mínimo sempre presente (0.002)
+        stress_gain: quanto estresse/emocao intensa amplifica o atrito (0.08)
+        recovery_rate: recuperação significativa (0.008)
+        irreversibility: fração do dano que nunca se recupera (0.08)
         *_noise: ruído funcional aplicado a módulos-alvo
+        
+        RESULTADOS ESPERADOS:
+        - Vigília pura: ~101h até damage=1.0
+        - Com ciclos normais: ~13 dias até damage=1.0
+        - Após 3h vigília: damage ~0.03 (antes era 1.0)
+        - Ratio acumulação/recovery: 4.75:1 (antes era 290:1)
         """
         self.rng = random.Random(seed)
         self.base_friction = base_friction
@@ -79,7 +91,7 @@ class CognitiveFriction:
                 "chronic": bool(self.chronic),
                 "last_updated": datetime.now().isoformat(),
                 "total_sessions": 1,
-                "version": "1.0.0"
+                "version": "2.0.0"  # Incrementado para 2.0
             }
             if os.path.exists(DAMAGE_FILE):
                 with open(DAMAGE_FILE, "r", encoding="utf-8") as f:

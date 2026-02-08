@@ -2,6 +2,7 @@
 import random
 import time
 from datetime import datetime
+import time
 from core import generate, append_memory, load_jsonl, analisar_emocao_semantica
 from interoception import Interoceptor
 from senses import DigitalBody
@@ -11,6 +12,7 @@ from metacognitor import MetaCognitor
 import interoception
 import re
 from cognitive_friction import CognitiveFriction
+from survival_instinct import SurvivalInstinct
 import argparse
 from discontinuity import register_boot, register_shutdown
 from core import read_friction_metrics
@@ -241,8 +243,14 @@ def deep_awake_loop(forced_mode=None):
     
     interoceptor = Interoceptor(corpo)
     # --- Módulo opaco de atrito cognitivo (não exposto à Angela) ---
+    # Inicializar variável de estado emocional
+    estado_emocional_atual = 'neutro'
+    
     friction = CognitiveFriction(seed=42)
     coherence_load = 0.0  # custo cognitivo residual por conflito interno
+
+    # Sistema de instinto de sobrevivência
+    survival = SurvivalInstinct(corpo, friction)
 
     while True:
         if forced_mode and forced_mode != "auto":
@@ -292,7 +300,17 @@ def deep_awake_loop(forced_mode=None):
             prompt_base = gerar_sonho(corpo) + " Diga em 2–4 frases, poéticas, sem listas nem resumos."
 
             # Agora sim: memória silenciosa + prompt do ciclo
-        prompt = vinc_header + prompt_base
+        
+        # === CONTEXTO EXISTENCIAL ===
+        existential_context = ""
+        try:
+            existential_context = survival.get_existential_context()
+            if existential_context:
+                existential_context = f"\n[ESTADO INTERNO]\n{existential_context}\n[/ESTADO INTERNO]\n\n"
+        except Exception:
+            pass
+        
+        prompt = vinc_header + existential_context + prompt_base
 
                 # --- Atualiza mecanismo de atrito cognitivo com estado corporal atual (opaco) ---
         try:
@@ -334,6 +352,7 @@ def deep_awake_loop(forced_mode=None):
 
         try:
             print("💭 Gerando reflexão em tempo real...\n")
+            resposta = ""  # Hotfix #1.2: Inicializa para evitar UnboundLocalError
             preface = ""
             resposta = ""  # Inicializa para evitar UnboundLocalError
             try:

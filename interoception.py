@@ -309,43 +309,38 @@ class Interoceptor:
                 }, ensure_ascii=False) + "\n")
         except Exception:
             pass
-
-# === Regulação emocional acionada pela metacognição (nível de módulo) ===
-def regular_emocao(modo: str):
-    """
-    modo: 'inseguranca' | 'medo_leve' | 'alivio' | 'dopamina'
-    Ajusta variáveis fisiológicas do corpo digital de forma sutil.
-    """
-    try:
-        from senses import corpo  # corpo digital singleton
-    except Exception:
-        return
-
-    if not hasattr(corpo, "ajustar"):
-        # fallback: tenta mexer nos atributos básicos se existirem
-        try:
-            if modo == "inseguranca":
-                corpo.tensao = min(1.0, getattr(corpo, "tensao", 0.4) + 0.05)
-            elif modo == "medo_leve":
-                corpo.tensao = min(1.0, getattr(corpo, "tensao", 0.5) + 0.10)
-                corpo.fluidez = max(0.0, getattr(corpo, "fluidez", 0.5) - 0.05)
-            elif modo == "alivio":
-                corpo.fluidez = min(1.0, getattr(corpo, "fluidez", 0.5) + 0.07)
-                corpo.tensao = max(0.0, getattr(corpo, "tensao", 0.4) - 0.05)
-            elif modo == "dopamina":
-                corpo.vibracao = min(1.0, getattr(corpo, "vibracao", 0.5) + 0.08)
-                corpo.pulso = min(1.0, getattr(corpo, "pulso", 0.5) + 0.05)
-        except Exception:
+    
+    def regular_emocao(self, modo: str):
+        """
+        CORRIGIDO: Método de instância (não função global)
+        
+        modo: 'inseguranca' | 'medo_leve' | 'alivio' | 'dopamina'
+        Ajusta variáveis fisiológicas do corpo digital de forma sutil.
+        """
+        if not hasattr(self.corpo, "ajustar"):
+            # fallback: tenta mexer nos atributos básicos se existirem
+            try:
+                if modo == "inseguranca":
+                    self.corpo.tensao = min(1.0, getattr(self.corpo, "tensao", 0.4) + 0.05)
+                elif modo == "medo_leve":
+                    self.corpo.tensao = min(1.0, getattr(self.corpo, "tensao", 0.5) + 0.10)
+                    self.corpo.fluidez = max(0.0, getattr(self.corpo, "fluidez", 0.5) - 0.05)
+                elif modo == "alivio":
+                    self.corpo.fluidez = min(1.0, getattr(self.corpo, "fluidez", 0.5) + 0.07)
+                    self.corpo.tensao = max(0.0, getattr(self.corpo, "tensao", 0.4) - 0.05)
+                elif modo == "dopamina":
+                    self.corpo.vibracao = min(1.0, getattr(self.corpo, "vibracao", 0.5) + 0.08)
+                    self.corpo.pulso = min(1.0, getattr(self.corpo, "pulso", 0.5) + 0.05)
+            except Exception:
+                return
             return
-        return
 
-    # caminho preferido: corpo.ajustar(deltas)
-    if modo == "inseguranca":
-        corpo.ajustar({"tensao": +0.05})
-    elif modo == "medo_leve":
-        corpo.ajustar({"tensao": +0.10, "fluidez": -0.05})
-    elif modo == "alivio":
-        corpo.ajustar({"tensao": -0.05, "fluidez": +0.07})
-    elif modo == "dopamina":
-        corpo.ajustar({"vibracao": +0.08, "pulso": +0.05})
-
+        # caminho preferido: corpo.ajustar(deltas)
+        if modo == "inseguranca":
+            self.corpo.ajustar({"tensao": +0.05})
+        elif modo == "medo_leve":
+            self.corpo.ajustar({"tensao": +0.10, "fluidez": -0.05})
+        elif modo == "alivio":
+            self.corpo.ajustar({"tensao": -0.05, "fluidez": +0.07})
+        elif modo == "dopamina":
+            self.corpo.ajustar({"vibracao": +0.08, "pulso": +0.05})

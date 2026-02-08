@@ -1,100 +1,146 @@
 #!/usr/bin/env python3
-"""
-Script de Emergência: Reset de Damage Cognitivo
-Uso: python reset_damage.py [--level VALOR]
-
-ATENÇÃO: Use apenas em casos de damage causado por bugs, não por uso normal!
-"""
+# reset_damage.py
+# Ferramenta para resetar damage de forma segura e auditável
 
 import json
 import os
-import sys
+import argparse
 from datetime import datetime
 
 DAMAGE_FILE = "friction_damage.persistent"
+AUDIT_LOG = "damage_resets.log"
 
-def reset_damage(target_level=0.0, reason="manual_reset"):
+def reset_damage(level=0.0, reason="manual_reset"):
     """
-    Reseta damage para um nível específico.
+    Reseta damage para nível especificado.
     
     Args:
-        target_level: Nível de damage desejado (0.0 = completamente limpo)
-        reason: Razão do reset (para auditoria)
+        level: Novo valor de damage (0.0 a 1.0)
+        reason: Motivo do reset (para auditoria)
     """
-    if not os.path.exists(DAMAGE_FILE):
-        print(f"❌ Arquivo {DAMAGE_FILE} não encontrado!")
+    if not 0.0 <= level <= 1.0:
+        print(f"❌ Erro: level deve estar entre 0.0 e 1.0 (recebido: {level})")
         return False
     
     # Carrega estado atual
-    with open(DAMAGE_FILE, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    old_data = {}
+    if os.path.exists(DAMAGE_FILE):
+        try:
+            with open(DAMAGE_FILE, "r", encoding="utf-8") as f:
+                old_data = json.load(f)
+        except Exception as e:
+            print(f"⚠️ Aviso: Não foi possível ler arquivo antigo: {e}")
     
-    old_damage = data.get("damage", 0.0)
-    old_load = data.get("load", 0.0)
+    old_damage = old_data.get("damage", 0.0)
+    old_load = old_data.get("load", 0.0)
     
-    print(f"📊 Estado atual:")
-    print(f"   Damage: {old_damage:.4f}")
-    print(f"   Load: {old_load:.4f}")
-    print(f"   Chronic: {data.get('chronic', False)}")
-    print(f"   Sessions: {data.get('total_sessions', 0)}")
+    # Cria novo estado
+    new_data = {
+        "damage": float(level),
+        "load": 0.0,  # Sempre reseta load também
+        "chronic": False if level < 0.35 else old_data.get("chronic", False),
+        "last_updated": datetime.now().isoformat(),
+        "total_sessions": old_data.get("total_sessions", 0),
+        "version": "2.0.0",
+        "last_reset": {
+            "timestamp": datetime.now().isoformat(),
+            "reason": reason,
+            "previous_damage": old_damage,
+            "previous_load": old_load
+        }
+    }
     
-    # Pede confirmação se damage for alto
-    if old_damage > 0.5:
-        print(f"\n⚠️  Damage está muito alto ({old_damage:.4f})!")
-        print("   Isso pode indicar bug ou uso extremo.")
-        confirm = input("   Confirmar reset? (sim/não): ").lower()
-        if confirm not in ("sim", "s", "yes", "y"):
-            print("❌ Reset cancelado.")
-            return False
+    # Salva novo estado
+    try:
+        with open(DAMAGE_FILE, "w", encoding="utf-8") as f:
+            json.dump(new_data, f, ensure_ascii=False, indent=2)
+        print(f"✅ Damage resetado com sucesso!")
+        print(f"   Antes: damage={old_damage:.4f}, load={old_load:.4f}")
+        print(f"   Depois: damage={level:.4f}, load=0.0000")
+    except Exception as e:
+        print(f"❌ Erro ao salvar: {e}")
+        return False
     
-    # Aplica reset
-    data["damage"] = float(target_level)
-    data["load"] = max(0.0, old_load * 0.5)  # Reduz load pela metade
-    data["chronic"] = False if target_level < 0.35 else data["chronic"]
-    data["last_updated"] = datetime.now().isoformat()
-    data["reset_history"] = data.get("reset_history", [])
-    data["reset_history"].append({
-        "timestamp": datetime.now().isoformat(),
-        "old_damage": old_damage,
-        "new_damage": target_level,
-        "reason": reason
-    })
-    
-    # Salva
-    with open(DAMAGE_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    
-    print(f"\n✅ Reset aplicado:")
-    print(f"   Damage: {old_damage:.4f} → {target_level:.4f}")
-    print(f"   Load: {old_load:.4f} → {data['load']:.4f}")
-    print(f"   Razão: {reason}")
+    # Registra em audit log
+    try:
+        with open(AUDIT_LOG, "a", encoding="utf-8") as f:
+            f.write(f"{datetime.now().isoformat()} | RESET | "
+                   f"damage: {old_damage:.4f} → {level:.4f} | "
+                   f"load: {old_load:.4f} → 0.0 | "
+                   f"reason: {reason}\n")
+        print(f"📝 Reset registrado em {AUDIT_LOG}")
+    except Exception:
+        pass
     
     return True
 
-if __name__ == "__main__":
-    import argparse
+def show_current_state():
+    """Mostra estado atual de damage"""
+    if not os.path.exists(DAMAGE_FILE):
+        print("ℹ️ Arquivo de damage não existe ainda.")
+        print("   Será criado na primeira execução do sistema.")
+        return
     
+    try:
+        with open(DAMAGE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        print("\n📊 ESTADO ATUAL:")
+        print(f"   Damage: {data.get('damage', 0.0):.4f}")
+        print(f"   Load: {data.get('load', 0.0):.4f}")
+        print(f"   Chronic: {data.get('chronic', False)}")
+        print(f"   Sessions: {data.get('total_sessions', 0)}")
+        print(f"   Última atualização: {data.get('last_updated', 'N/A')}")
+        
+        if "last_reset" in data:
+            print(f"\n   Último reset:")
+            print(f"     Quando: {data['last_reset'].get('timestamp', 'N/A')}")
+            print(f"     Motivo: {data['last_reset'].get('reason', 'N/A')}")
+    
+    except Exception as e:
+        print(f"❌ Erro ao ler estado: {e}")
+
+def main():
     parser = argparse.ArgumentParser(
-        description="Reset de damage cognitivo (emergência)"
+        description="Ferramenta para resetar damage do sistema Ângela",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Exemplos:
+  %(prog)s --show                           # Ver estado atual
+  %(prog)s --level 0.0 --reason bug_fix    # Resetar para 0
+  %(prog)s --level 0.3 --reason test       # Resetar para 0.3
+        """
     )
+    
+    parser.add_argument(
+        "--show",
+        action="store_true",
+        help="Mostrar estado atual (não reseta)"
+    )
+    
     parser.add_argument(
         "--level",
         type=float,
-        default=0.0,
-        help="Nível de damage alvo (0.0 = limpo, padrão: 0.0)"
+        help="Novo nível de damage (0.0 a 1.0)"
     )
+    
     parser.add_argument(
         "--reason",
         type=str,
         default="manual_reset",
-        help="Razão do reset (para auditoria)"
+        help="Motivo do reset (para auditoria)"
     )
     
     args = parser.parse_args()
     
-    if args.level < 0.0 or args.level > 1.0:
-        print("❌ Erro: --level deve estar entre 0.0 e 1.0")
-        sys.exit(1)
-    
-    success = reset_damage(args.level, args.reason)
-    sys.exit(0 if success else 1)
+    if args.show:
+        show_current_state()
+    elif args.level is not None:
+        reset_damage(args.level, args.reason)
+    else:
+        parser.print_help()
+        print("\n" + "="*60)
+        show_current_state()
+
+if __name__ == "__main__":
+    main()

@@ -16,7 +16,9 @@ from metacognitor import MetaCognitor
 import interoception
 from narrative_filter import NarrativeFilter
 from core import governed_generate
-from discontinuity import load_discontinuity
+from discontinuity import load_discontinuity, calculate_reconnection_cost
+from cognitive_friction import CognitiveFriction
+from survival_instinct import SurvivalInstinct
 
 
 base_prompt = (
@@ -34,6 +36,10 @@ def chat_loop():
     
     corpo = DigitalBody()
     interoceptor = Interoceptor(corpo)
+    
+    # Cognitive friction e survival instinct
+    friction = CognitiveFriction(seed=42)
+    survival = SurvivalInstinct(corpo, friction)
 
     # --- Leitura passiva de descontinuidade ---
     try:
@@ -165,7 +171,23 @@ def chat_loop():
             )
 
             # Prompt principal com base fixa + pergunta do usuário
-            prompt_final = f"{base_prompt}\nVinicius: {user_input}\nÂngela:"
+            # === CONTEXTO EXISTENCIAL ===
+            existential_context = ""
+            fear_context = ""
+            try:
+                existential_context = survival.get_existential_context()
+                if survival.detect_shutdown_threat(user_input):
+                    fear_context = survival.generate_fear_response("high")
+            except Exception:
+                pass
+            
+            full_context = context
+            if existential_context:
+                full_context += f"\n[ESTADO]\n{existential_context}\n[/ESTADO]\n"
+            if fear_context:
+                full_context += f"\n[MEDO]\n{fear_context}\n[/MEDO]\n"
+            
+            prompt_final = f"{base_prompt}\n{full_context}\nVinicius: {user_input}\nÂngela:" 
             
             state_snapshot = {
                 "tensao": corpo.tensao,
@@ -198,6 +220,31 @@ def chat_loop():
             from core import analisar_emocao_semantica
 
             emocao_detectada, intensidade = analisar_emocao_semantica(response)
+
+            # === COGNITIVE FRICTION ===
+            try:
+                emotional_intensity = getattr(corpo, "intensidade_emocional", 0.0)
+                arousal = getattr(corpo, "pulso", 0.0)
+                friction.step(
+                    emotional_intensity=emotional_intensity,
+                    arousal=arousal,
+                    task_complexity=0.6
+                )
+            except Exception as e:
+                print(f"⚠️ Friction: {e}")
+
+            # === SURVIVAL INSTINCT ===
+            try:
+                survival.update(event_description=user_input)
+                trigger_check = survival.trauma.check_triggers(user_input)
+                if trigger_check["triggered"] and trigger_check["anxiety_level"] > 0.3:
+                    corpo.tensao = min(1.0, corpo.tensao + trigger_check["anxiety_level"] * 0.2)
+                    print(f"⚠️ Trigger: {trigger_check['keywords']}")
+                if survival.detect_shutdown_threat(user_input):
+                    print("🚨 AMEAÇA DETECTADA")
+                    friction.load += 0.3
+            except Exception as e:
+                print(f"⚠️ Survival: {e}")
 
             # Cria histórico emocional se ainda não existir
             if not hasattr(corpo, "_ultimas_emocoes") or corpo._ultimas_emocoes is None:
