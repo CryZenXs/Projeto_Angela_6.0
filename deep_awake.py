@@ -35,7 +35,7 @@ def extrair_memorias_significativas(caminho_memoria="angela_memory.jsonl", camin
                 for ll in f_auto:
                     try:
                         j = json.loads(ll)
-                        chave = (j.get("orig_ts"), j.get("autor"), j.get("gasto", ""))  # ‘gasto’ vai ser o trecho do input
+                        chave = (j.get("orig_ts"), j.get("autor"), j.get("gasto", ""))  # 'gasto' vai ser o trecho do input
                         existentes.add(chave)
                     except Exception:
                         continue
@@ -46,7 +46,7 @@ def extrair_memorias_significativas(caminho_memoria="angela_memory.jsonl", camin
         return
 
     memorias_significativas = []
-    for m in linhas[-200:]:  # últimas 200 interações
+    for m in linhas[-200:]:  # Últimas 200 interações
         estado = m.get("estado_interno", {}) or {}
         emocao = estado.get("emocao", "neutro")
 
@@ -140,7 +140,7 @@ def extrair_memorias_significativas(caminho_memoria="angela_memory.jsonl", camin
         except Exception:
             pass
 
-# 🔄 --- Persistência do ciclo biológico ---
+# 📄 --- Persistência do ciclo biológico ---
 
 def carregar_estado():
     """Carrega o último ciclo salvo."""
@@ -222,6 +222,13 @@ def parse_args():
     )
     return parser.parse_args()
 
+COMPENSATORY_PHRASES = [
+    "acho que estou tentando ser clara",
+    "talvez eu esteja pensando demais",
+    "não sei se estou explicando direito",
+    "isso faz sentido pra mim, mesmo confuso",
+]
+
 def deep_awake_loop(forced_mode=None):
     """Loop contínuo do modo autônomo de Ângela"""
     # --- Registro de reconexão estrutural ---
@@ -242,7 +249,7 @@ def deep_awake_loop(forced_mode=None):
         print(f"[RECONEXÃO] Gap de {gap/3600:.1f}h detectado. Custos: fluidez{reconnection_cost['fluidez']:.3f}, tensão+{reconnection_cost['tensao']:.3f}")
     
     interoceptor = Interoceptor(corpo)
-    # --- Módulo opaco de atrito cognitivo (não exposto à Angela) ---
+    # --- Módulo opaco de atrito cognitivo (não exposto a Angela) ---
     # Inicializar variável de estado emocional
     estado_emocional_atual = 'neutro'
     
@@ -343,13 +350,6 @@ def deep_awake_loop(forced_mode=None):
             # falha silenciosa: não impacta geração nem narrativa
             pass
 
-        COMPENSATORY_PHRASES = [
-            "acho que estou tentando ser clara",
-            "talvez eu esteja pensando demais",
-            "não sei se estou explicando direito",
-            "isso faz sentido pra mim, mesmo confuso",
-        ]
-
         try:
             print("💭 Gerando reflexão em tempo real...\n")
             resposta = ""  # Hotfix #1.2: Inicializa para evitar UnboundLocalError
@@ -374,11 +374,26 @@ def deep_awake_loop(forced_mode=None):
                 "emocao": estado_emocional_atual
             }
 
-            recent_reflections = [
-                m.get("angela", "")
-                for m in load_jsonl("angela_memory.jsonl")[-5:]
-                if isinstance(m.get("angela", ""), str)
-            ]
+            # 🔥 HOTFIX: Filtrar reflexões vazias E metacognições
+            recent_reflections = []
+            try:
+                for m in load_jsonl("angela_memory.jsonl")[-10:]:  # Pega mais para filtrar
+                    # Pular metacognições (tipo="metacognicao")
+                    if isinstance(m.get("user"), dict):
+                        if m["user"].get("tipo") == "metacognicao":
+                            continue
+                    
+                    # Pegar "angela" se não estiver vazio
+                    angela_text = m.get("angela", "")
+                    if isinstance(angela_text, str) and angela_text.strip():
+                        recent_reflections.append(angela_text)
+                    
+                    # Limitar a 5 reflexões reais
+                    if len(recent_reflections) >= 5:
+                        break
+            except Exception as e:
+                print(f"⚠️ Erro ao carregar reflexões: {e}")
+                recent_reflections = []
 
             from core import governed_generate
             from narrative_filter import NarrativeFilter
@@ -451,7 +466,7 @@ def deep_awake_loop(forced_mode=None):
             except Exception:
                 emocao_detectada, intensidade_emocional = ("neutro", 0.0)
 
-            # aplica no corpo, para que interocepção e regulação sintam isso
+            # aplica no corpo, para que interoceptção e regulação sintam isso
             corpo.aplicar_emocao(emocao_detectada, intensidade_emocional)
             if ciclo == "vigilia":
                 modo = "conversacional"
@@ -496,7 +511,7 @@ def deep_awake_loop(forced_mode=None):
             try:
                 metrics = friction.external_metrics()
                 if metrics.get("damage", 0.0) > 0.04 and memorias_passadas:
-                    # às vezes omite ou embaralha uma memória recente para simular erro de recall
+                    # Às vezes omite ou embaralha uma memória recente para simular erro de recall
                     if random.random() < min(0.35, 0.12 + metrics["damage"]):
                         # pop aleatório (simula perda temporária)
                         if len(memorias_passadas) > 1:
@@ -528,17 +543,22 @@ def deep_awake_loop(forced_mode=None):
             print(f"⚠️ Erro ao gerar reflexão temporal: {e}")
 
         try:
-            append_memory(
-                {
-                    "autor": "Sistema(DeepAwake)",
-                    "conteudo": f"[DeepAwake:{ciclo}]",
-                    "tipo": "autonomo",
-                    "timestamp": datetime.now().isoformat()
-                },
-                resposta,
-                corpo,
-                reflexao_temporal,
-            )
+            # 🔥 HOTFIX: NÃO salvar se resposta está vazia (evita loop infinito)
+            if resposta and resposta.strip():
+                append_memory(
+                    {
+                        "autor": "Sistema(DeepAwake)",
+                        "conteudo": f"[DeepAwake:{ciclo}]",
+                        "tipo": "autonomo",
+                        "timestamp": datetime.now().isoformat()
+                    },
+                    resposta,
+                    corpo,
+                    reflexao_temporal,
+                )
+                print("💾 Memória registrada.\n")
+            else:
+                print("⚠️ Resposta vazia - memória NÃO salva (evitando poluição).\n")
 
             if ciclo == "repouso":
                 # --- Recuperação parcial do atrito durante repouso (opaco, lenta e não completa) ---
@@ -562,7 +582,7 @@ def deep_awake_loop(forced_mode=None):
             metrics = friction.external_metrics()
             # escreva num arquivo de debug separado (somente humano)
             with open("friction_metrics.log", "a", encoding="utf-8") as fm:
-                fm.write(f"{datetime.now().isoformat()} | ciclo={ciclo} | load={metrics['load']} | damage={metrics['damage']}\\n")
+                fm.write(f"{datetime.now().isoformat()} | ciclo={ciclo} | load={metrics['load']} | damage={metrics['damage']}\n")
         except Exception:
             pass
 
