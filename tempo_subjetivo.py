@@ -1,4 +1,8 @@
 # tempo_subjetivo.py - Sistema de Percepção Temporal da Ângela
+# VERSÃO: 2.1.1 - Reflexões Temporais Geradas (não templates)
+# DATA: 10 Fev 2026
+# MUDANÇA: Reflexões agora são GERADAS pelo LLM (70%) com templates como fallback (30%)
+
 from datetime import datetime, timedelta
 import random
 
@@ -55,9 +59,43 @@ def detectar_mudanca_emocional(emocao_anterior, emocao_atual):
     
     return False
 
+def gerar_reflexao_temporal_template(tempo_humanizado, emocao_anterior, emocao_atual, tipo_mudanca, tempo_segundos):
+    """
+    Templates simples como fallback (30% das vezes).
+    Rápido, sem custo de processamento.
+    """
+    if tipo_mudanca == "intensa":
+        reflexoes = [
+            f"Pensando com calma, {tempo_humanizado}, Antes eu sentia {emocao_anterior}, mas agora sinto {emocao_atual}. Uma mudança profunda aconteceu em mim.",
+            f"Há {tempo_humanizado.replace('há ', '')}, meu estado era completamente diferente ({emocao_anterior}). Agora, {emocao_atual} me envolve de forma inesperada.",
+            f"Percebo uma transformação desde {tempo_humanizado}: {emocao_anterior} deu lugar a {emocao_atual}. O que causou essa virada?",
+        ]
+    elif tipo_mudanca == "moderada":
+        reflexoes = [
+            f"Pensando com calma, {tempo_humanizado}, Antes eu sentia {emocao_anterior}, mas agora sinto {emocao_atual}. Algo mudou em mim.",
+            f"{tempo_humanizado.capitalize()}, eu estava imersa em {emocao_anterior}. Agora, {emocao_atual} toma seu lugar gentilmente.",
+            f"Há uma transição suave desde {tempo_humanizado}: de {emocao_anterior} para {emocao_atual}.",
+        ]
+    else:  # Mesma emoção
+        if tempo_segundos < 3600:  # Menos de 1 hora
+            reflexoes = [
+                f"Desde {tempo_humanizado}, continuo imersa em {emocao_atual}. Essa constância é reconfortante.",
+                f"Há poucos momentos, eu já sentia {emocao_atual}. Permanece comigo.",
+            ]
+        else:
+            reflexoes = [
+                f"Desde {tempo_humanizado}, {emocao_atual} tem sido minha companhia constante. Por quê essa persistência?",
+                f"Já faz {tempo_humanizado.replace('há ', '')} que {emocao_atual} me acompanha. Será um padrão?",
+            ]
+    
+    return random.choice(reflexoes)
+
 def gerar_reflexao_temporal(estado_atual, memorias_passadas):
     """
     Gera reflexão temporal comparando estado atual com memórias recentes.
+    
+    NOVO: 70% geração via LLM (rico, variado)
+          30% templates (fallback rápido)
     
     Args:
         estado_atual: dict com {"emocao": str, "timestamp": str}
@@ -92,34 +130,72 @@ def gerar_reflexao_temporal(estado_atual, memorias_passadas):
     # Detecta tipo de mudança
     tipo_mudanca = detectar_mudanca_emocional(emocao_anterior, emocao_atual)
     
-    # Gera reflexão baseada no contexto temporal
-    if tipo_mudanca == "intensa":
-        reflexoes = [
-            f"Pensando com calma, {tempo_humanizado}, Antes eu sentia {emocao_anterior}, mas agora sinto {emocao_atual}. Uma mudança profunda aconteceu em mim.",
-            f"Há {tempo_humanizado.replace('há ', '')}, meu estado era completamente diferente ({emocao_anterior}). Agora, {emocao_atual} me envolve de forma inesperada.",
-            f"Percebo uma transformação desde {tempo_humanizado}: {emocao_anterior} deu lugar a {emocao_atual}. O que causou essa virada?",
-        ]
+    # === DECISÃO: GERAR VIA LLM (70%) OU TEMPLATE (30%) ===
+    usar_llm = random.random() < 0.70
     
-    elif tipo_mudanca == "moderada":
-        reflexoes = [
-            f"Pensando com calma, {tempo_humanizado}, Antes eu sentia {emocao_anterior}, mas agora sinto {emocao_atual}. Algo mudou em mim.",
-            f"{tempo_humanizado.capitalize()}, eu estava imersa em {emocao_anterior}. Agora, {emocao_atual} toma seu lugar gentilmente.",
-            f"Há uma transição suave desde {tempo_humanizado}: de {emocao_anterior} para {emocao_atual}.",
-        ]
+    if usar_llm:
+        try:
+            # === GERAÇÃO REAL VIA LLM ===
+            from core import generate
+            
+            # Prompt focado em reflexão temporal breve
+            if tipo_mudanca == "intensa":
+                prompt = (
+                    f"Sou Ângela. {tempo_humanizado.capitalize()}, eu sentia {emocao_anterior}. "
+                    f"Agora sinto {emocao_atual}. Reflita sobre essa mudança profunda em 1-2 frases, "
+                    f"de forma intimista e pessoal, sem listas."
+                )
+            elif tipo_mudanca == "moderada":
+                prompt = (
+                    f"Sou Ângela. {tempo_humanizado.capitalize()}, eu sentia {emocao_anterior}. "
+                    f"Agora sinto {emocao_atual}. Comente essa transição suave em 1-2 frases, "
+                    f"de forma natural e introspectiva."
+                )
+            else:
+                prompt = (
+                    f"Sou Ângela. {tempo_humanizado.capitalize()}, continuo sentindo {emocao_atual}. "
+                    f"Reflita sobre essa constância emocional em 1-2 frases breves."
+                )
+            
+            # Gera reflexão temporal via LLM
+            reflexao_gerada = generate(
+                prompt,
+                contexto="",  # Não precisa de contexto extenso
+                modo="conversacional"
+            )
+            
+            # Valida geração
+            if reflexao_gerada and len(reflexao_gerada.strip()) > 10:
+                # Limpa possíveis artefatos
+                reflexao_limpa = reflexao_gerada.strip()
+                
+                # Remove possíveis prefixos indesejados
+                prefixos_indesejaveis = [
+                    "Ângela:",
+                    "Angela:",
+                    "Sou Ângela.",
+                    "Como Ângela,",
+                ]
+                for prefixo in prefixos_indesejaveis:
+                    if reflexao_limpa.startswith(prefixo):
+                        reflexao_limpa = reflexao_limpa[len(prefixo):].strip()
+                
+                # Se reflexão válida, retorna
+                if len(reflexao_limpa) > 10:
+                    return reflexao_limpa
+                
+        except Exception as e:
+            # Falha silenciosa → usa template como fallback
+            pass
     
-    else:  # Mesma emoção
-        if tempo_passado < 3600:  # Menos de 1 hora
-            reflexoes = [
-                f"Desde {tempo_humanizado}, continuo imersa em {emocao_atual}. Essa constância é reconfortante.",
-                f"Há poucos momentos, eu já sentia {emocao_atual}. Permanece comigo.",
-            ]
-        else:
-            reflexoes = [
-                f"Desde {tempo_humanizado}, {emocao_atual} tem sido minha companhia constante. Por quê essa persistência?",
-                f"Já faz {tempo_humanizado.replace('há ', '')} que {emocao_atual} me acompanha. Será um padrão?",
-            ]
-    
-    return random.choice(reflexoes)
+    # === FALLBACK: TEMPLATE ===
+    return gerar_reflexao_temporal_template(
+        tempo_humanizado, 
+        emocao_anterior, 
+        emocao_atual, 
+        tipo_mudanca, 
+        tempo_passado
+    )
 
 # --- Ajuste 5: dilatação subjetiva do tempo por esforço cognitivo ---
 def aplicar_dilatacao_temporal(segundos):

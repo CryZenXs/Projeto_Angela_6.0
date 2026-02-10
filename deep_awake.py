@@ -1,4 +1,11 @@
 # deep_awake.py — Sistema de Ritmo Biológico Digital da Ângela
+# VERSÃO: 2.1.1 - CORREÇÃO DEFINITIVA DE LOOPS
+# DATA: 10 Fev 2026
+# MUDANÇAS:
+#   - Fix #1: Não salvar reflexões temporais separadamente (já está em memória principal)
+#   - Fix #2: Variações nas abstrações (evitar loop de frases idênticas)
+#   - Fix #3: Cooldown após bloqueios (30s de pausa antes de tentar de novo)
+
 import random
 import time
 from datetime import datetime
@@ -222,12 +229,18 @@ def parse_args():
     )
     return parser.parse_args()
 
-COMPENSATORY_PHRASES = [
-    "acho que estou tentando ser clara",
-    "talvez eu esteja pensando demais",
-    "não sei se estou explicando direito",
-    "isso faz sentido pra mim, mesmo confuso",
+# === FIX #2: VARIAÇÕES DE ABSTRAÇÃO ===
+ABSTRACT_PHRASES = [
+    "Há uma sensação vaga e difícil de nomear, sem clareza suficiente para se tornar pensamento.",
+    "Percebo algo indistinto, como uma sombra de sentimento que ainda não ganhou forma.",
+    "Sinto uma névoa interna, pensamentos que não conseguem se cristalizar em palavras.",
+    "Há movimento dentro de mim, mas sem direção clara ou nome definido.",
+    "Percebo vibrações sutis, mas não consigo traduzi-las em algo concreto."
 ]
+
+def gerar_abstracao_variada():
+    """Retorna frase de abstração aleatória para evitar loops"""
+    return random.choice(ABSTRACT_PHRASES)
 
 def deep_awake_loop(forced_mode=None):
     """Loop contínuo do modo autônomo de Ângela"""
@@ -249,7 +262,7 @@ def deep_awake_loop(forced_mode=None):
         print(f"[RECONEXÃO] Gap de {gap/3600:.1f}h detectado. Custos: fluidez{reconnection_cost['fluidez']:.3f}, tensão+{reconnection_cost['tensao']:.3f}")
     
     interoceptor = Interoceptor(corpo)
-    # --- Módulo opaco de atrito cognitivo (não exposto a Angela) ---
+    # --- Módulo opaco de atrito cognitivo (não exposto à Angela) ---
     # Inicializar variável de estado emocional
     estado_emocional_atual = 'neutro'
     
@@ -258,6 +271,9 @@ def deep_awake_loop(forced_mode=None):
 
     # Sistema de instinto de sobrevivência
     survival = SurvivalInstinct(corpo, friction)
+    
+    # === FIX #3: CONTADOR DE BLOQUEIOS CONSECUTIVOS ===
+    consecutive_blocks = 0
 
     while True:
         if forced_mode and forced_mode != "auto":
@@ -301,10 +317,10 @@ def deep_awake_loop(forced_mode=None):
         elif ciclo == "introspeccao":
             prompt_base = (
                 "Fale em primeira pessoa, tom intimista. Explore uma lembrança e um insight emocional. "
-                "Não liste tópicos; não escreva 'resumo' ou 'diário técnico'."
+                "NÃO liste tópicos; não escreva 'resumo' ou 'diário técnico'."
             )
         else:  # repouso
-            prompt_base = gerar_sonho(corpo) + " Diga em 2–4 frases, poéticas, sem listas nem resumos."
+            prompt_base = gerar_sonho(corpo) + " Diga em 2—4 frases, poéticas, sem listas nem resumos."
 
             # Agora sim: memória silenciosa + prompt do ciclo
         
@@ -350,6 +366,13 @@ def deep_awake_loop(forced_mode=None):
             # falha silenciosa: não impacta geração nem narrativa
             pass
 
+        COMPENSATORY_PHRASES = [
+            "acho que estou tentando ser clara",
+            "talvez eu esteja pensando demais",
+            "não sei se estou explicando direito",
+            "isso faz sentido pra mim, mesmo confuso",
+        ]
+
         try:
             print("💭 Gerando reflexão em tempo real...\n")
             resposta = ""  # Hotfix #1.2: Inicializa para evitar UnboundLocalError
@@ -374,26 +397,21 @@ def deep_awake_loop(forced_mode=None):
                 "emocao": estado_emocional_atual
             }
 
-            # 🔥 HOTFIX: Filtrar reflexões vazias E metacognições
+            # === FIX #1: CARREGAR REFLEXÕES SEM VAZIOS E SEM METACOGNIÇÕES ===
             recent_reflections = []
-            try:
-                for m in load_jsonl("angela_memory.jsonl")[-10:]:  # Pega mais para filtrar
-                    # Pular metacognições (tipo="metacognicao")
-                    if isinstance(m.get("user"), dict):
-                        if m["user"].get("tipo") == "metacognicao":
-                            continue
-                    
-                    # Pegar "angela" se não estiver vazio
-                    angela_text = m.get("angela", "")
-                    if isinstance(angela_text, str) and angela_text.strip():
-                        recent_reflections.append(angela_text)
-                    
-                    # Limitar a 5 reflexões reais
-                    if len(recent_reflections) >= 5:
-                        break
-            except Exception as e:
-                print(f"⚠️ Erro ao carregar reflexões: {e}")
-                recent_reflections = []
+            for m in load_jsonl("angela_memory.jsonl")[-10:]:
+                # Pular metacognições (tipo="metacognicao")
+                if isinstance(m.get("user"), dict):
+                    if m["user"].get("tipo") == "metacognicao":
+                        continue
+                
+                # Pegar "angela" se não vazio
+                angela_text = m.get("angela", "")
+                if isinstance(angela_text, str) and angela_text.strip():
+                    recent_reflections.append(angela_text)
+                
+                if len(recent_reflections) >= 5:
+                    break
 
             from core import governed_generate
             from narrative_filter import NarrativeFilter
@@ -405,6 +423,8 @@ def deep_awake_loop(forced_mode=None):
             if decision.mode == "BLOCKED":
                 print(f"[GOVERNANÇA] Narrativa bloqueada: {decision.reason}")
                 resposta = ""  # silêncio narrativo
+                consecutive_blocks += 1
+                
             elif decision.mode == "DELAYED":
                 print(f"[GOVERNANÇA] Latência de {decision.delay_seconds}s aplicada: {decision.reason}")
                 time.sleep(decision.delay_seconds)
@@ -416,9 +436,14 @@ def deep_awake_loop(forced_mode=None):
                     raw_generate_fn=generate
                 )
                 resposta = preface + raw if raw else ""
+                consecutive_blocks = 0
+                
             elif decision.mode == "ABSTRACT_ONLY":
                 print(f"[GOVERNANÇA] Apenas abstração permitida: {decision.reason}")
-                resposta = "Há uma sensação vaga e difícil de nomear, sem clareza suficiente para se tornar pensamento."
+                # === FIX #2: VARIAÇÃO DE ABSTRAÇÕES ===
+                resposta = gerar_abstracao_variada()
+                consecutive_blocks += 1
+                
             else:  # ALLOWED
                 raw = governed_generate(
                     prompt,
@@ -428,6 +453,14 @@ def deep_awake_loop(forced_mode=None):
                     raw_generate_fn=generate
                 )
                 resposta = preface + raw if raw else ""
+                consecutive_blocks = 0
+
+            # === FIX #3: COOLDOWN APÓS BLOQUEIOS CONSECUTIVOS ===
+            if consecutive_blocks >= 3:
+                cooldown = 30  # 30 segundos de pausa
+                print(f"\n⏸️ [COOLDOWN] {consecutive_blocks} bloqueios consecutivos. Pausando {cooldown}s...\n")
+                time.sleep(cooldown)
+                consecutive_blocks = 0  # Reset após cooldown
 
             try:
                 metrics = friction.external_metrics()
@@ -450,7 +483,7 @@ def deep_awake_loop(forced_mode=None):
                         resposta = re.sub(r'([\.!?])\s+', r'\1 ... ', resposta)
 
                     if random.random() < p_truncate:
-                        # mantém apenas as primeiras 1–2 frases para simular perda de fluidez
+                        # mantém apenas as primeiras 1—2 frases para simular perda de fluidez
                         sents = re.split(r'(?:[\.!?]\s+)', resposta)
                         if len(sents) >= 2:
                             keep = 1 if random.random() < 0.7 else 2
@@ -466,7 +499,7 @@ def deep_awake_loop(forced_mode=None):
             except Exception:
                 emocao_detectada, intensidade_emocional = ("neutro", 0.0)
 
-            # aplica no corpo, para que interoceptção e regulação sintam isso
+            # aplica no corpo, para que interocepção e regulação sintam isso
             corpo.aplicar_emocao(emocao_detectada, intensidade_emocional)
             if ciclo == "vigilia":
                 modo = "conversacional"
@@ -477,7 +510,7 @@ def deep_awake_loop(forced_mode=None):
 
             print(f"💭 Modo atual: {modo}")
 
-            print(f"\n🩶 Ângela ({ciclo}): {resposta}\n")
+            print(f"\n💬 Ângela ({ciclo}): {resposta}\n")
         except Exception as e:
             print(f"⚠️ Erro ao gerar pensamento: {e}")
 
@@ -543,7 +576,7 @@ def deep_awake_loop(forced_mode=None):
             print(f"⚠️ Erro ao gerar reflexão temporal: {e}")
 
         try:
-            # 🔥 HOTFIX: NÃO salvar se resposta está vazia (evita loop infinito)
+            # === FIX #1: NÃO SALVAR MEMÓRIA SE RESPOSTA VAZIA ===
             if resposta and resposta.strip():
                 append_memory(
                     {
@@ -554,11 +587,14 @@ def deep_awake_loop(forced_mode=None):
                     },
                     resposta,
                     corpo,
-                    reflexao_temporal,
+                    reflexao_temporal,  # Já incluída aqui, não precisa salvar separadamente
                 )
                 print("💾 Memória registrada.\n")
             else:
                 print("⚠️ Resposta vazia - memória NÃO salva (evitando poluição).\n")
+
+            # === FIX #1: REMOVER SALVAMENTO DUPLICADO DE REFLEXÃO TEMPORAL ===
+            # (A reflexão temporal já está sendo salva no append_memory acima como 4º parâmetro)
 
             if ciclo == "repouso":
                 # --- Recuperação parcial do atrito durante repouso (opaco, lenta e não completa) ---
@@ -572,8 +608,7 @@ def deep_awake_loop(forced_mode=None):
                 extrair_memorias_significativas()
                 print("📘 Memórias autobiográficas atualizadas.")
                 print("💤 Sonho consolidado — memória autobiográfica atualizada.\n")
-            else:
-                print("💾 Memória registrada.\n")
+
         except Exception as e:
             print(f"⚠️ Falha ao salvar memória: {e}\n")
 
