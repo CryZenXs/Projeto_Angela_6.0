@@ -1,0 +1,8 @@
+{
+  "boot_count": 3,
+  "last_shutdown": "2026-02-10T12:39:09.493811",
+  "last_boot": "2026-02-10T12:34:35.486367",
+  "total_downtime_seconds": 32.866048,
+  "longest_gap_seconds": 32.866048,
+  "current_gap_seconds": 32.866048
+}

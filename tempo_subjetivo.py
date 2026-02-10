@@ -198,19 +198,11 @@ def gerar_reflexao_temporal(estado_atual, memorias_passadas):
     )
 
 # --- Ajuste 5: dilatação subjetiva do tempo por esforço cognitivo ---
-def aplicar_dilatacao_temporal(segundos):
+def aplicar_dilatacao_temporal(segundos, coherence_load=0.0):
     """
-    Aplica distorção subjetiva do tempo baseada em carga cognitiva silenciosa.
-    Não altera o tempo real, apenas a percepção.
+    Aplica distorção subjetiva do tempo baseada em carga cognitiva.
     """
-    try:
-        from senses import corpo
-        carga = float(getattr(corpo, "coherence_load", 0.0))
-    except Exception:
-        carga = 0.0
-
-    # dilatação suave, sem exponencial
-    fator = 1.0 + min(0.6, carga * 0.8)
+    fator = 1.0 + min(0.6, coherence_load * 0.8)
     return segundos * fator
 
 def gerar_contexto_circadiano():

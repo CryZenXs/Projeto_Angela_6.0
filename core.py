@@ -325,7 +325,7 @@ REGRAS DE LINGUAGEM ATIVAS (FASE EXPERIMENTAL):
 """
 
 # === GERAÇÃO DE RESPOSTAS ===
-def generate(user_input, contexto="", modo="conversacional"):
+def generate(user_input, contexto="", modo="conversacional", friction=None):
     """
     Gera respostas da Ângela com separação entre contexto factual (dialogal)
     e emocional (introspectivo).
@@ -401,6 +401,12 @@ def generate(user_input, contexto="", modo="conversacional"):
     except Exception:
         # falha silenciosa - comportamento original mantido
         pass   
+
+    if friction is not None:
+        try:
+            temperature = friction.perturb_language(temperature)
+        except Exception:
+            pass
 
     payload = {
         "model": MODEL,

@@ -1,8 +1,8 @@
 {
   "damage": 0.0,
-  "load": 0.0,
+  "load": 0.17541568592637213,
   "chronic": true,
-  "last_updated": "2026-02-07T12:50:35.894875",
-  "total_sessions": 6,
-  "version": "1.0.0"
+  "last_updated": "2026-02-10T12:34:35.492845",
+  "total_sessions": 10,
+  "version": "2.0.0"
 }

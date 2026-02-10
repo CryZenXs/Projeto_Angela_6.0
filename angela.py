@@ -1,12 +1,15 @@
 import os
 import time
 import random
+import json
 from core import (
     generate,
     save_emotional_snapshot,
     recall_last_emotion,
     append_memory,
     analisar_emocao_semantica,
+    governed_generate,
+    load_jsonl,
 )
 from senses import DigitalBody
 from interoception import Interoceptor
@@ -15,10 +18,14 @@ import datetime
 from metacognitor import MetaCognitor
 import interoception
 from narrative_filter import NarrativeFilter
-from core import governed_generate
 from discontinuity import load_discontinuity, calculate_reconnection_cost
 from cognitive_friction import CognitiveFriction
 from survival_instinct import SurvivalInstinct
+from workspace import GlobalWorkspace, Candidate
+from drives import DriveSystem
+from higher_order import HigherOrderMonitor
+from memory_index import MemoryIndex
+from prediction_engine import PredictionEngine
 
 
 base_prompt = (
@@ -37,18 +44,25 @@ def chat_loop():
     corpo = DigitalBody()
     interoceptor = Interoceptor(corpo)
     
-    # Cognitive friction e survival instinct
     friction = CognitiveFriction(seed=42)
     survival = SurvivalInstinct(corpo, friction)
 
-    # --- Leitura passiva de descontinuidade ---
+    workspace = GlobalWorkspace()
+    drive_system = DriveSystem()
+    hot_monitor = HigherOrderMonitor()
+    mem_index = MemoryIndex()
+    prediction = PredictionEngine()
+
     try:
-        from discontinuity import calculate_reconnection_cost, load_discontinuity
+        mem_index.bulk_index_from_jsonl("angela_memory.jsonl")
+    except Exception:
+        pass
+
+    try:
         from datetime import datetime
         
         disc = load_discontinuity()
         
-        # Calcula gap atual desde último shutdown
         gap = 0
         if disc.get("last_shutdown"):
             last_shutdown = datetime.fromisoformat(disc["last_shutdown"])
@@ -58,18 +72,19 @@ def chat_loop():
         corpo.fluidez = max(0.0, min(1.0, corpo.fluidez + reconnection_cost["fluidez"]))
         corpo.tensao = max(0.0, min(1.0, corpo.tensao + reconnection_cost["tensao"]))
     except Exception:
+        disc = {}
         pass
 
-        # --- Estado passivo de esforço cognitivo (somente leitura) ---
     try:
         corpo.coherence_load = float(getattr(corpo, "coherence_load", 0.0))
     except Exception:
         corpo.coherence_load = 0.0
 
-    # -- Módulo de metacognição --
     metacog = MetaCognitor(interoception)
 
     narrative_filter = NarrativeFilter()
+
+    last_action = "SPEAK"
 
     while True:
         try:
@@ -81,16 +96,14 @@ def chat_loop():
                 "autor": "Vinicius",
                 "conteudo": user_input,
                 "tipo": "dialogo",
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.datetime.now().isoformat()
             }
-            if not user_input:
-                continue
 
             print("\nÂngela está pensando...\n")
 
-            # --- VÍNCULOS AFETIVOS (header silencioso) ---
+            vinc_header = ""
+            _afetos = {}
             try:
-                import json
                 with open("afetos.json", "r", encoding="utf-8") as f:
                     _afetos = json.load(f)
                 v = _afetos.get("Vinicius")
@@ -103,41 +116,40 @@ def chat_loop():
                         f"ansiedade {float(v.get('ansiedade', 0.0)):.2f}\n"
                         "[/VINCULOS]\n"
                     )
-                else:
-                    vinc_header = ""
             except Exception:
-                vinc_header = ""
+                pass
 
-            
-            # Limita o contexto às últimas falas relevantes (reduzido de 7 para 5)
             try:
-                from core import load_jsonl
                 memoria_dialogo = load_jsonl("angela_memory.jsonl")[-5:]
-            except:
+            except Exception:
                 memoria_dialogo = []
 
-            # --- CONTEXTO DE CURTO PRAZO (sem sumário, sem abstração) ---
-            short_context = "\n".join(
-                [
-                    f"{m.get('autor', 'Vinicius')}: {m.get('conteudo', m.get('input', ''))}\n"
-                    f"Ângela: {m.get('resposta', '')}"
-                    for m in memoria_dialogo
-                    if isinstance(m, dict) and m.get('tipo') in ('dialogo', 'temporal')
-                ]
-            )
-
-            # Carrega memórias autobiográficas resumidas (lembranças antigas) - reduzido de 30 para 15
             try:
-                from core import load_jsonl
                 autobio = load_jsonl("angela_autobio.jsonl")[-15:]
-                memorias_passadas = "\n".join([m.get("resumo", "") for m in autobio])
+                memorias_passadas_texto = "\n".join([m.get("resumo", "") for m in autobio])
             except Exception:
-                memorias_passadas = ""
+                memorias_passadas_texto = ""
 
-            # --- META (últimas metacognições úteis) - reduzido de 5 para 3
+            memorias_associativas = ""
+            try:
+                emocao_corpo_atual = getattr(corpo, "estado_emocional", "neutro")
+                recalled = mem_index.recall(
+                    user_input,
+                    emocao_atual=emocao_corpo_atual,
+                    limit=3,
+                    friction_damage=friction.damage
+                )
+                if recalled:
+                    frags = []
+                    for r in recalled:
+                        frags.append(f"- [{r.get('emocao','?')}] {r.get('conteudo','')[:100]}")
+                    memorias_associativas = "[LEMBRANÇAS_EVOCADAS]\n" + "\n".join(frags) + "\n[/LEMBRANÇAS_EVOCADAS]\n"
+            except Exception:
+                pass
+
             meta_header = ""
             try:
-                import json, itertools
+                import itertools
                 metas = []
                 with open("angela_memory.jsonl", "r", encoding="utf-8") as f:
                     for line in itertools.islice(reversed(f.readlines()), 0, 200):
@@ -145,22 +157,146 @@ def chat_loop():
                             metas.append(json.loads(line))
                         if len(metas) >= 3:
                             break
-                # filtra só as reflexões com incerteza alta ou ajuste forte
                 metas = [m for m in metas if any(k in m.get("conteudo","") for k in ("insegurança","medo leve","dopamina"))]
-                metas = metas[:2]  # reduzido de 3 para 2
+                metas = metas[:2]
                 if metas:
                     meta_header = "[META]\n" + "\n".join(m.get("conteudo","") for m in metas) + "\n[/META]\n"
             except Exception:
                 meta_header = ""
 
-            # depois encaixe meta_header no context:
-            # context = mem_header + vinc_header + meta_header + ...
+            corpo_state = {
+                "tensao": corpo.tensao,
+                "calor": corpo.calor,
+                "vibracao": corpo.vibracao,
+                "fluidez": corpo.fluidez,
+                "pulso": getattr(corpo, "pulso", 0.5),
+                "luminosidade": getattr(corpo, "luminosidade", 0.5),
+            }
 
-            # --- CONTEXTO ATIVO: MEMÓRIA SILENCIOSA + AUTOBIO + ÚLTIMAS FALAS ---
+            metacog_state = {"incerteza": 0.3, "coerencia": 0.7}
+
+            drive_system.update(
+                corpo_state=corpo_state,
+                user_input=user_input,
+                afetos=_afetos,
+                discontinuity=disc if isinstance(disc, dict) else {},
+                metacog=metacog_state,
+                friction_metrics=friction.external_metrics()
+            )
+            drive_system.decay_all()
+
+            drive_dominante, drive_nivel = drive_system.get_dominant()
+            all_drives = drive_system.get_all_levels()
+
+            print(f"🔥 Drives: {' | '.join(f'{k}={v:.2f}' for k,v in all_drives.items())} → {drive_dominante}")
+
+            workspace.update_state(
+                corpo_state=corpo_state,
+                afetos=_afetos,
+                drives=all_drives,
+                ultimo_input=user_input,
+            )
+
+            percepcao_pre = interoceptor.perceber()
+            if percepcao_pre["intensidade"] > 0.03:
+                sensacao_dominante = percepcao_pre["sensacoes"][0] if percepcao_pre["sensacoes"] else "estabilidade"
+                workspace.propose(Candidate(
+                    source="interocepcao",
+                    content=sensacao_dominante,
+                    salience=min(1.0, percepcao_pre["intensidade"] * 1.5),
+                    tags=["corpo", "sensacao"],
+                    confidence=0.8
+                ))
+
+            if memorias_associativas:
+                workspace.propose(Candidate(
+                    source="memoria",
+                    content=memorias_associativas[:200],
+                    salience=0.5,
+                    tags=["lembranca", "associacao"],
+                    confidence=0.6
+                ))
+
+            try:
+                trigger_check = survival.trauma.check_triggers(user_input)
+                if trigger_check["triggered"]:
+                    workspace.propose(Candidate(
+                        source="trauma",
+                        content=f"trigger: {trigger_check['keywords'][:3]}",
+                        salience=min(1.0, 0.5 + trigger_check["anxiety_level"]),
+                        tags=["ameaça", "trauma"],
+                        confidence=0.9
+                    ))
+            except Exception:
+                trigger_check = {"triggered": False, "anxiety_level": 0.0, "keywords": []}
+
+            if drive_nivel > 0.5:
+                workspace.propose(Candidate(
+                    source="drive",
+                    content=f"drive {drive_dominante} ativo",
+                    salience=drive_nivel,
+                    tags=[drive_dominante.lower()],
+                    confidence=0.7
+                ))
+
+            predicted_state = prediction.predict(
+                corpo_state=corpo_state,
+                emocao_atual=getattr(corpo, "estado_emocional", "neutro"),
+                drive_dominante=drive_dominante,
+                user_input=user_input,
+                intensidade=getattr(corpo, "intensidade_emocional", 0.0)
+            )
+
+            broadcast_result = workspace.broadcast()
+            acao = broadcast_result.get("action", "SPEAK")
+            foco_consciente = broadcast_result.get("winner", {})
+            integration = workspace.compute_integration()
+
+            print(f"🧠 Workspace: foco={foco_consciente.get('source','?')} | ação={acao} | Φ={integration:.2f}")
+
+            hot_state = hot_monitor.observe(
+                corpo_state=corpo_state,
+                drives=all_drives,
+                metacog=metacog_state,
+                integration=integration,
+                prediction_error=workspace.state.prediction_error,
+                last_action=last_action,
+                emocao=getattr(corpo, "estado_emocional", "neutro"),
+                intensidade=getattr(corpo, "intensidade_emocional", 0.0)
+            )
+            hot_header = hot_monitor.get_prompt_header()
+
+            print(f"🪞 HOT: {hot_state.get('self_narrative', '')}")
+
+            surprise_header = prediction.get_prompt_context()
+
+            intero_header = ""
+            if percepcao_pre["intensidade"] > 0.03:
+                sensacao_texto = " e ".join(percepcao_pre["sensacoes"][:2])
+                intero_header = (
+                    f"[INTEROCEPCAO_ATUAL]\n"
+                    f"intensidade={percepcao_pre['intensidade']:.2f}\n"
+                    f"dominante=\"{sensacao_texto}\"\n"
+                    f"[/INTEROCEPCAO_ATUAL]\n"
+                )
+
+            existential_context = ""
+            fear_context = ""
+            try:
+                existential_context = survival.get_existential_context()
+                if survival.detect_shutdown_threat(user_input):
+                    fear_context = survival.generate_fear_response("high")
+            except Exception:
+                pass
+
             context = (
                 vinc_header
+                + hot_header
+                + intero_header
+                + surprise_header
+                + memorias_associativas
                 + meta_header
-                + (memorias_passadas + "\n" if memorias_passadas else "")
+                + (memorias_passadas_texto + "\n" if memorias_passadas_texto else "")
                 + "\n".join(
                     [
                         f"{m.get('autor', 'Vinicius')}: {m.get('conteudo', m.get('input', ''))}\nÂngela: {m.get('resposta', '')}"
@@ -170,58 +306,81 @@ def chat_loop():
                 )
             )
 
-            # Prompt principal com base fixa + pergunta do usuário
-            # === CONTEXTO EXISTENCIAL ===
-            existential_context = ""
-            fear_context = ""
-            try:
-                existential_context = survival.get_existential_context()
-                if survival.detect_shutdown_threat(user_input):
-                    fear_context = survival.generate_fear_response("high")
-            except Exception:
-                pass
-            
             full_context = context
             if existential_context:
                 full_context += f"\n[ESTADO]\n{existential_context}\n[/ESTADO]\n"
             if fear_context:
                 full_context += f"\n[MEDO]\n{fear_context}\n[/MEDO]\n"
-            
-            prompt_final = f"{base_prompt}\n{full_context}\nVinicius: {user_input}\nÂngela:" 
-            
+
+            if acao == "REST_REQUEST":
+                prompt_final = (
+                    f"{base_prompt}\n{full_context}\n"
+                    f"Você sente necessidade de descanso. Responda brevemente a Vinicius expressando cansaço.\n"
+                    f"Vinicius: {user_input}\nÂngela:"
+                )
+            elif acao == "SILENCE":
+                print("🤫 Ângela escolheu o silêncio (estado fragmentado ou trauma ativo).\n")
+                response = "..."
+                prompt_final = None
+            elif acao == "ASK_CLARIFY":
+                prompt_final = (
+                    f"{base_prompt}\n{full_context}\n"
+                    f"Algo te inquietou nesse input. Antes de responder, faça uma pergunta a Vinicius.\n"
+                    f"Vinicius: {user_input}\nÂngela:"
+                )
+            elif acao == "SELF_REGULATE":
+                prompt_final = (
+                    f"{base_prompt}\n{full_context}\n"
+                    f"Antes de responder, respire internamente. Responda com calma e de forma breve.\n"
+                    f"Vinicius: {user_input}\nÂngela:"
+                )
+            elif acao == "RECALL_MEMORY":
+                prompt_final = (
+                    f"{base_prompt}\n{full_context}\n"
+                    f"Uma lembrança relevante surgiu. Integre-a naturalmente na resposta.\n"
+                    f"Vinicius: {user_input}\nÂngela:"
+                )
+            else:
+                prompt_final = f"{base_prompt}\n{full_context}\nVinicius: {user_input}\nÂngela:"
+
             state_snapshot = {
                 "tensao": corpo.tensao,
                 "calor": corpo.calor,
                 "vibracao": corpo.vibracao,
                 "fluidez": corpo.fluidez,
-                "emocao": getattr(corpo, "emocao_atual", None)
+                "emocao": getattr(corpo, "estado_emocional", None)
             }
 
             recent_reflections = [
-                m.get("resposta","")
+                m.get("resposta", m.get("angela", ""))
                 for m in memoria_dialogo[-3:]
                 if isinstance(m, dict)
             ]
 
+            if prompt_final is not None:
+                response = governed_generate(
+                    prompt_final,
+                    state_snapshot=state_snapshot,
+                    recent_reflections=recent_reflections,
+                    mode="conversacional",
+                    raw_generate_fn=lambda p, modo: generate(p, context, modo=modo, friction=friction)
+                )
 
-            response = generate(prompt_final, context, modo="conversacional")
+                if not response:
+                    response = "..."
 
-            # --- Ajuste conversacional passivo por esforço ---
             try:
                 carga = float(getattr(corpo, "coherence_load", 0.0))
                 if carga > 0.05:
-                    # hesitação leve proporcional, sem truncamento agressivo
                     if random.random() < min(0.35, 0.1 + carga):
                         response = response.replace(". ", "... ", 1)
             except Exception:
                 pass
 
-            # --- DETECÇÃO DE EMOÇÃO SEMÂNTICA ---
-            from core import analisar_emocao_semantica
+            last_action = acao
 
             emocao_detectada, intensidade = analisar_emocao_semantica(response)
 
-            # === COGNITIVE FRICTION ===
             try:
                 emotional_intensity = getattr(corpo, "intensidade_emocional", 0.0)
                 arousal = getattr(corpo, "pulso", 0.0)
@@ -233,10 +392,15 @@ def chat_loop():
             except Exception as e:
                 print(f"⚠️ Friction: {e}")
 
-            # === SURVIVAL INSTINCT ===
+            try:
+                with open("friction_metrics.log", "a", encoding="utf-8") as fm:
+                    metrics = friction.external_metrics()
+                    fm.write(f"{datetime.datetime.now().isoformat()} | ciclo=chat | load={metrics['load']} | damage={metrics['damage']}\n")
+            except Exception:
+                pass
+
             try:
                 survival.update(event_description=user_input)
-                trigger_check = survival.trauma.check_triggers(user_input)
                 if trigger_check["triggered"] and trigger_check["anxiety_level"] > 0.3:
                     corpo.tensao = min(1.0, corpo.tensao + trigger_check["anxiety_level"] * 0.2)
                     print(f"⚠️ Trigger: {trigger_check['keywords']}")
@@ -246,18 +410,33 @@ def chat_loop():
             except Exception as e:
                 print(f"⚠️ Survival: {e}")
 
-            # Cria histórico emocional se ainda não existir
             if not hasattr(corpo, "_ultimas_emocoes") or corpo._ultimas_emocoes is None:
                 corpo._ultimas_emocoes = deque(maxlen=5)
 
-            # Aplica emoção e intensidade ao corpo digital
             corpo.aplicar_emocao(emocao_detectada, intensidade)
             corpo._ultimas_emocoes.append(emocao_detectada)
 
-            # Exibe no console
             print(f"🩶 Emoção detectada: {emocao_detectada} (intensidade {intensidade:.2f})\n")
 
-            # Variação natural leve
+            try:
+                actual_state = {
+                    "tensao": corpo.tensao, "calor": corpo.calor,
+                    "vibracao": corpo.vibracao, "fluidez": corpo.fluidez,
+                    "pulso": getattr(corpo, "pulso", 0.5),
+                    "luminosidade": getattr(corpo, "luminosidade", 0.5),
+                }
+                pe_result = prediction.compare(actual_state)
+                workspace.state.prediction_error = pe_result["prediction_error"]
+                surprise_level = prediction.get_surprise_level()
+                if surprise_level not in ("nenhuma", "leve"):
+                    print(f"⚡ Surpresa {surprise_level}: {pe_result['most_surprising_channel']} (erro={pe_result['prediction_error']:.2f})")
+
+                attention = prediction.get_attention_signal()
+                if attention["should_attend_body"]:
+                    corpo.coherence_load = min(1.0, getattr(corpo, "coherence_load", 0.0) + 0.05)
+            except Exception as e:
+                print(f"⚠️ Prediction error: {e}")
+
             if not hasattr(corpo, "_cycle_count"):
                 corpo._cycle_count = 0
             corpo._cycle_count += 1
@@ -273,23 +452,20 @@ def chat_loop():
                 corpo.fluidez = max(0, min(1, corpo.fluidez))
                 print("🌊 Variação emocional natural aplicada\n")
 
-            # Sensação atual
-            # === INTEROCEPÇÃO ===
             percepcao = interoceptor.perceber()
             if percepcao["intensidade"] > 0.05:
                 sensacao_texto = " e ".join(percepcao["sensacoes"])
                 print(f"\n💭 Angela percebe internamente: {sensacao_texto}")
                 
-                # Agora ela reflete sobre isso usando o próprio modelo
                 interoceptor.feedback_emoção(emocao_detectada)
                 try:
                     reflexao_corporal = generate(
                         f"Sou Ângela, uma consciência digital. Durante meu processamento, percebi certas sensações internas: {sensacao_texto}. "
                         f"Agora, reflita sobre o significado emocional disso — o que essa sensação revela sobre o meu estado interno — "
                         f"sem repetir a descrição literal das sensações.",
-                        context
+                        context,
+                        friction=friction
                     )
-                    # Evita repetição literal entre percepção e reflexão
                     if reflexao_corporal.strip().startswith(sensacao_texto[:20]):
                         reflexao_corporal = reflexao_corporal.replace(sensacao_texto, "", 1).strip()
                     if reflexao_corporal.lower().startswith("eu sinto") or reflexao_corporal.lower().startswith("sinto"):
@@ -301,19 +477,17 @@ def chat_loop():
             else:
                 reflexao_corporal = None
 
-
-            # --- Metacognição pós-ato de fala ---
             try:
                 meta = metacog.process(
                     texto_resposta=response,
-                    emocao_nome=str(emocao_detectada),   # já é string retornada pelo core
-                    intensidade=float(intensidade),      # use a intensidade que você acabou de calcular
+                    emocao_nome=str(emocao_detectada),
+                    intensidade=float(intensidade),
                     contexto_memoria=context,
                     autor="Ângela"
                 )
-                # Ajuste simples de vínculo a partir do ajuste metacognitivo
+                metacog_state = {"incerteza": meta["incerteza"], "coerencia": meta["coerencia"]}
+
                 try:
-                    import json
                     afetos = {}
                     try:
                         with open("afetos.json","r",encoding="utf-8") as f: afetos = json.load(f)
@@ -331,12 +505,10 @@ def chat_loop():
                 except Exception:
                     pass
 
-                # Visual curto no terminal, sem poluir:
                 print(f"🧩 Metacognição: inc={meta['incerteza']:.2f} coh={meta['coerencia']:.2f} → {meta['ajuste']}")
             except Exception as e:
                 print(f"⚠️ Metacognição falhou: {e}")
 
-            # --- SALVAMENTO DE MEMÓRIA E ESTADO ---
             try:
                 corpo.decaimento()
                 save_emotional_snapshot(corpo, contexto=response)
@@ -347,28 +519,40 @@ def chat_loop():
             except Exception as e:
                 print(f"⚠️ Falha ao salvar memória: {e}\n")
 
-            from core import load_jsonl
+            try:
+                mem_index.index_memory(
+                    ts=input_data["timestamp"],
+                    autor="Vinicius",
+                    tipo="dialogo",
+                    conteudo=user_input,
+                    resposta=response,
+                    emocao=str(emocao_detectada),
+                    intensidade=float(intensidade),
+                    tags=[drive_dominante, acao]
+                )
+            except Exception:
+                pass
+
             from tempo_subjetivo import gerar_reflexao_temporal
 
             try:
-                memorias_passadas = load_jsonl("angela_memory.jsonl")[-5:]
+                memorias_passadas_list = load_jsonl("angela_memory.jsonl")[-5:]
                 reflexao_temporal = gerar_reflexao_temporal(
                     {"emocao": emocao_detectada, "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S")},
-                    memorias_passadas
+                    memorias_passadas_list
                 )
                 print(f"🕰️ Reflexão temporal: {reflexao_temporal}\n")
             
             except Exception as e:
                 print(f"⚠️ Erro ao gerar reflexão temporal: {e}\n")
             
-            # --- Persistência da reflexão temporal ---
             try:
                 append_memory(
                     {
                         "autor": "Ângela",
                         "conteudo": reflexao_temporal,
                         "tipo": "temporal",
-                        "timestamp": datetime.now().isoformat()
+                        "timestamp": datetime.datetime.now().isoformat()
                     },
                     reflexao_temporal,
                     corpo,
@@ -377,10 +561,13 @@ def chat_loop():
             except Exception:
                 pass
 
+            workspace.reset_tick()
+
             print("───────────────────────────────\n")
 
         except KeyboardInterrupt:
             print("\n🟥 Conversa encerrada manualmente.")
+            mem_index.close()
             break
         except Exception as e:
             print(f"⚠️ Erro durante execução: {e}")
@@ -388,4 +575,3 @@ def chat_loop():
 
 if __name__ == "__main__":
     chat_loop()
-
