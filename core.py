@@ -438,7 +438,7 @@ def generate(user_input, contexto="", modo="conversacional", friction=None):
     sys.stdout.reconfigure(encoding='utf-8')  # evita bug de acento no terminal
     text = ""
     try:
-        r = requests.post("http://localhost:11434/api/generate", json=payload, stream=True, timeout=120)
+        r = requests.post("http://localhost:11434/api/generate", json=payload, stream=True)
         for i, line in enumerate(r.iter_lines()):
             if not line:
                 continue
@@ -461,9 +461,6 @@ def generate(user_input, contexto="", modo="conversacional", friction=None):
                 break
     except requests.exceptions.ConnectionError:
         print("\n⚠️ [Ollama] Conexão recusada — verifique se o servidor está rodando em localhost:11434")
-        return ""
-    except requests.exceptions.Timeout:
-        print("\n⚠️ [Ollama] Timeout — servidor demorou mais de 120s para responder")
         return ""
     except Exception as e:
         print(f"\n⚠️ [Ollama] Erro inesperado: {e}")
