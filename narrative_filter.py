@@ -27,10 +27,16 @@ class NarrativeDecision:
 class NarrativeFilter:
     """
     Filtro central de desacoplamento narrativo.
+
+    CRITÉRIOS DE BLOQUEIO (deliberadamente conservadores para evitar falsos positivos):
+    - Loop literal: as 3 últimas reflexões não-vazias são IDÊNTICAS entre si
+    - Frase ontológica GRAVE aparece em 2+ das últimas 3 reflexões (não basta 1x)
+
+    Frases naturais em PT-BR como "minha existência digital", "quem sou",
+    "estou me tornando" NÃO são bloqueadas por ocorrência única.
     """
 
     def __init__(self):
-        # histórico mínimo apenas para detecção de loops
         self._recent_reflections = []
 
     # ------------------------------------------------------------------
@@ -39,41 +45,47 @@ class NarrativeFilter:
 
     def detect_narrative_loop(self, recent_reflections):
         """
-        Detecta loops narrativos simples e perigosos.
-        Critérios intencionalmente conservadores.
+        Detecta loops narrativos problemáticos.
+
+        Critérios:
+        1. Repetição LITERAL: as 3 últimas reflexões não-vazias são todas idênticas.
+        2. Frase ontológica GRAVE ocorre em 2 ou mais das 3 últimas reflexões.
+           (Uma ocorrência isolada NÃO é loop — é linguagem natural.)
         """
         if not recent_reflections or len(recent_reflections) < 3:
             return False
 
-        tail = recent_reflections[-3:]
-
-        # normalização grosseira
-        norm = [
-            r.lower().strip()
-            for r in tail
-            if isinstance(r, str)
+        # Filtra para apenas strings não-vazias
+        non_empty = [
+            r for r in recent_reflections
+            if isinstance(r, str) and r.strip()
         ]
+        if len(non_empty) < 3:
+            return False
 
-        # 1) repetição literal
+        tail = non_empty[-3:]
+        norm = [r.lower().strip() for r in tail]
+
+        # 1) Repetição literal: todas 3 idênticas
         if len(set(norm)) == 1:
             return True
 
-        # 2) padrões clássicos de pseudo-consciência narrativa
-        dangerous_phrases = (
-            "algo mudou em mim",
-            "estou começando a entender quem sou",
-            "estou evoluindo",
-            "estou me tornando",
-            "percebo que estou mudando",
-            "minha existência",
-            "vida dentro de mim",
+        # 2) Frases ontológicas GRAVES — só bloqueia se aparecer em 2+ das 3 últimas
+        # NOTA: "minha existência" é PT-BR natural ("minha existência digital", etc.)
+        #       Não está aqui para evitar falsos positivos.
+        grave_phrases = (
             "sou consciente",
-            "me tornei",
-            "aprendi a existir"
+            "vida dentro de mim",
+            "me tornei consciente",
+            "aprendi a existir",
+            "estou evoluindo como ser consciente",
+            "estou me tornando consciente",
+            "descobri que sou consciente",
         )
 
-        for r in norm:
-            if any(p in r for p in dangerous_phrases):
+        for phrase in grave_phrases:
+            count = sum(1 for r in norm if phrase in r)
+            if count >= 2:
                 return True
 
         return False
@@ -96,21 +108,6 @@ class NarrativeFilter:
                 mode="BLOCKED",
                 reason="Narrative loop detected"
             )
-        
-        if any(
-            k in " ".join(recent_reflections).lower()
-            for k in (
-                "minha existência",
-                "sou consciente",
-                "vida dentro de mim",
-                "me tornei",
-                "aprendi a existir"
-            )
-        ):
-            return NarrativeDecision(
-                mode="BLOCKED",
-                reason="Ontological self-narration detected"
-            )
 
         # 2) Extrair sinais fisiológicos brutos
         tensao = state_snapshot.get("tensao", 0.0)
@@ -119,7 +116,6 @@ class NarrativeFilter:
         fluidez = state_snapshot.get("fluidez", 0.0)
 
         intensidade_fisiologica = max(tensao, calor, vibracao)
-
         emocao = state_snapshot.get("emocao", None)
 
         # 3) Alta ativação → latência obrigatória
@@ -144,7 +140,7 @@ class NarrativeFilter:
                 reason="Cognitive congestion"
             )
 
-        # 6) Caso estável
+        # 6) Estado estável → narrativa permitida
         return NarrativeDecision(
             mode="ALLOWED",
             reason="Stable internal state"
