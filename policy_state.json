@@ -1,0 +1,73 @@
+{
+  "epsilon": 0.06692790936655076,
+  "q_table": {
+    "tensao_ok|fluidez_low|damage_ok|pred_err_ok|vigilia": {
+      "SPEAK": {
+        "total_reward": 0.1536,
+        "count": 1,
+        "mean": 0.1536
+      }
+    },
+    "tensao_ok|fluidez_ok|damage_ok|pred_err_ok|vigilia": {
+      "ACT:MEMORY_CONSOLIDATE": {
+        "total_reward": -0.5199,
+        "count": 11,
+        "mean": -0.04726363636363637
+      },
+      "SPEAK": {
+        "total_reward": 0.2924,
+        "count": 12,
+        "mean": 0.024366666666666665
+      }
+    },
+    "tensao_ok|fluidez_ok|damage_ok|pred_err_ok|introspeccao": {
+      "SPEAK": {
+        "total_reward": -0.3424,
+        "count": 108,
+        "mean": -0.0031703703703703703
+      },
+      "ACT:REQUEST_SLEEP": {
+        "total_reward": -0.017400000000000002,
+        "count": 2,
+        "mean": -0.008700000000000001
+      },
+      "ACT:SENSE_REFRESH": {
+        "total_reward": -0.28590000000000004,
+        "count": 3,
+        "mean": -0.09530000000000001
+      },
+      "ACT:MEMORY_CONSOLIDATE": {
+        "total_reward": -0.0078,
+        "count": 1,
+        "mean": -0.0078
+      }
+    },
+    "tensao_ok|fluidez_ok|damage_high|pred_err_ok|introspeccao": {
+      "SPEAK": {
+        "total_reward": -0.04249999999999999,
+        "count": 22,
+        "mean": -0.0019318181818181812
+      }
+    },
+    "tensao_ok|fluidez_ok|damage_high|pred_err_ok|repouso": {
+      "ACT:SENSE_REFRESH": {
+        "total_reward": -0.0801,
+        "count": 1,
+        "mean": -0.0801
+      }
+    }
+  },
+  "recent_actions": [
+    "SPEAK",
+    "SPEAK",
+    "SPEAK",
+    "SPEAK",
+    "SPEAK",
+    "SPEAK",
+    "SPEAK",
+    "SPEAK",
+    "SPEAK",
+    "ACT:SENSE_REFRESH"
+  ],
+  "total_updates": 161
+}

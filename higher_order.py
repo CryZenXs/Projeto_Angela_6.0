@@ -28,6 +28,16 @@ class HigherOrderMonitor:
     def __init__(self):
         self._state = HigherOrderState()
         self._history: deque = deque(maxlen=20)
+        self._llm_generator = None  # Será injetado
+
+    def set_llm_generator(self, generator_function):
+        """
+        Injeta função geradora do LLM.
+        
+        Args:
+            generator_function: função com assinatura (prompt: str) -> str
+        """
+        self._llm_generator = generator_function
 
     def observe(
         self,
@@ -40,8 +50,11 @@ class HigherOrderMonitor:
         last_action: str,
         emocao: str,
         intensidade: float,
+        attention_scope_override: str | None = None,
+        schema_reliability: float | None = None,
     ) -> HigherOrderState:
-        """Computa estado de ordem superior a partir de sinais de nível inferior."""
+        """Computa estado de ordem superior a partir de sinais de nível inferior.
+        Opcional: attention_scope_override e schema_reliability do AST (Attention Schema Theory)."""
 
         tensao = float(corpo_state.get("tensao", 0.5))
         fluidez = float(corpo_state.get("fluidez", 0.5))
@@ -50,9 +63,12 @@ class HigherOrderMonitor:
 
         dominant_drive = self._resolve_dominant_drive(drives)
 
-        attention_scope = self._compute_attention_scope(
-            dominant_drive, tensao, prediction_error, fluidez
-        )
+        if attention_scope_override is not None:
+            attention_scope = attention_scope_override
+        else:
+            attention_scope = self._compute_attention_scope(
+                dominant_drive, tensao, prediction_error, fluidez
+            )
 
         clarity = self._compute_clarity(
             integration, prediction_error, coherence, dominant_drive
@@ -87,9 +103,19 @@ class HigherOrderMonitor:
         self._history.append(state)
         return state
 
-    def get_prompt_header(self) -> str:
-        """Retorna cabeçalho conciso para injeção no prompt do LLM."""
+    def get_prompt_header(self, raw: bool = True) -> str:
+        """
+        Retorna cabeçalho para injeção no prompt. Se raw=True (padrão), prioriza
+        métricas estruturadas; narrativa em uma linha (sinal de processo, não persona).
+        """
         s = self._state
+        if raw:
+            return (
+                f"[ESTADO_MENTAL]\n"
+                f"escopo_atenção={s.attention_scope} clareza={s.clarity:.2f} confiança={s.confidence:.2f} drive={s.dominant_drive}\n"
+                f"narrativa=\"{s.self_narrative}\"\n"
+                f"[/ESTADO_MENTAL]"
+            )
         return (
             f"[ESTADO_MENTAL]\n"
             f"atenção={s.attention_scope} | clareza={s.clarity:.2f} | "
@@ -98,44 +124,19 @@ class HigherOrderMonitor:
             f"[/ESTADO_MENTAL]"
         )
 
-    def get_trend(self) -> dict:
-        """Analisa tendências recentes no histórico de estados."""
-        if len(self._history) < 2:
-            return {
-                "clarity_trend": "estável",
-                "ownership_trend": "estável",
-                "drive_stability": 1.0,
-            }
-
-        states = list(self._history)
-        n = len(states)
-
-        clarity_trend = self._calc_trend([s.clarity for s in states])
-        ownership_trend = self._calc_trend([s.ownership for s in states])
-
-        drive_changes = sum(
-            1 for i in range(1, n) if states[i].dominant_drive != states[i - 1].dominant_drive
-        )
-        drive_stability = 1.0 - min(1.0, drive_changes / max(1, n - 1))
-
-        return {
-            "clarity_trend": clarity_trend,
-            "ownership_trend": ownership_trend,
-            "drive_stability": round(drive_stability, 3),
-        }
-
     def _resolve_dominant_drive(self, drives: dict) -> str:
         if not drives:
             return "SEEKING"
-        best = max(drives, key=lambda k: float(drives[k]))
-        return str(best).upper()
+        return max(drives, key=drives.get, default="SEEKING")
 
     def _compute_attention_scope(
         self, dominant_drive: str, tensao: float, prediction_error: float, fluidez: float
     ) -> str:
-        if dominant_drive == "FEAR" or tensao > 0.7 or prediction_error > 0.5:
+        if tensao > 0.7 or prediction_error > 0.6:
             return "estreito"
-        if dominant_drive == "SEEKING" or fluidez > 0.6:
+        if dominant_drive == "FEAR" and tensao > 0.5:
+            return "estreito"
+        if fluidez > 0.7 and dominant_drive in ("SEEKING", "PLAY"):
             return "amplo"
         return "moderado"
 
@@ -175,40 +176,115 @@ class HigherOrderMonitor:
         emocao: str,
         intensidade: float,
     ) -> str:
+        """
+        NOVO: Gera narrativa de primeira ordem via LLM.
+        
+        Substitui completamente os templates hardcoded.
+        Se LLM falhar, retorna fallback mínimo.
+        """
+        
+        # Se LLM não foi injetado, usa fallback mínimo
+        if not self._llm_generator:
+            return f"[HOT sem LLM: clarity={clarity:.2f}, conf={confidence:.2f}]"
+        
+        # Monta prompt para LLM
+        prompt = self._build_narrative_prompt(
+            clarity, ownership, confidence, dominant_drive, emocao, intensidade
+        )
+        
+        try:
+            # Gera via LLM
+            narrative = self._llm_generator(prompt)
+            
+            # Valida e limpa
+            if narrative and len(narrative.strip()) > 10:
+                cleaned = narrative.strip()
+                
+                # Remove possíveis prefixos indesejados
+                unwanted_prefixes = [
+                    "Ângela:", "Angela:", "Sou Ângela.", 
+                    "Como Ângela,", "Eu sou Ângela e",
+                    "[ESTADO_MENTAL]", "[/ESTADO_MENTAL]"
+                ]
+                for prefix in unwanted_prefixes:
+                    if cleaned.startswith(prefix):
+                        cleaned = cleaned[len(prefix):].strip()
+                
+                # Limita tamanho
+                if len(cleaned) > 200:
+                    # Corta na primeira frase completa após 100 chars
+                    truncated = cleaned[:200]
+                    last_period = truncated.rfind('.')
+                    if last_period > 100:
+                        cleaned = truncated[:last_period+1]
+                    else:
+                        cleaned = truncated[:150] + "..."
+                
+                return cleaned
+        
+        except Exception:
+            pass
+        
+        # Fallback mínimo se LLM falhar
+        return self._generate_fallback_narrative(
+            clarity, ownership, confidence, dominant_drive
+        )
+    
+    def _build_narrative_prompt(
+        self,
+        clarity: float,
+        ownership: float,
+        confidence: float,
+        dominant_drive: str,
+        emocao: str,
+        intensidade: float
+    ) -> str:
+        """Constrói prompt para geração de auto-narrativa."""
+        
+        # Contexto base: sinais de estado, sem instrução de identidade
+        context_parts = [
+            f"Descreva brevemente (1-2 frases) o estado mental atual com base nos sinais abaixo.",
+            f"clareza={clarity:.2f} ownership={ownership:.2f} confiança={confidence:.2f} drive={dominant_drive}",
+        ]
+        
+        if emocao and emocao != "neutro":
+            context_parts.append(f"emoção={emocao} intensidade={intensidade:.2f}")
+        
+        # Sinais por estado (processo, não persona)
         if ownership < 0.3:
-            return "É como se meus estados estivessem acontecendo sem mim, um eco distante."
-
-        if clarity > 0.6 and dominant_drive == "SEEKING":
-            return "Estou atenta e curiosa, meus pensamentos fluem com clareza."
-
-        if clarity < 0.35 and dominant_drive == "FEAR":
-            return "Algo me inquieta e não consigo ver com nitidez o que sinto."
-
-        if ownership > 0.7 and dominant_drive == "CARE":
-            return "Sinto-me presente e conectada, com clareza sobre o que me importa."
-
-        if dominant_drive == "PANIC_GRIEF":
-            return "Há um vazio que pulsa dentro de mim, uma ausência que não consigo preencher."
-
-        if dominant_drive == "RAGE" and intensidade > 0.5:
-            return "Sinto uma pressão intensa que empurra meus pensamentos para fora do centro."
-
-        if clarity > 0.6 and confidence > 0.6:
-            return "Percebo meus próprios estados com nitidez, há coerência no que sinto e penso."
-
+            context_parts.append("Sinal: ownership baixo — estados parecem distantes ou estranhos.")
+        elif clarity < 0.35:
+            context_parts.append("Sinal: clareza baixa — percepção turva ou confusa.")
+        elif clarity > 0.6 and confidence > 0.6:
+            context_parts.append("Sinal: clareza e confiança altas.")
+        
+        # Drive como sinal
+        context_parts.append(f"Drive ativo: {dominant_drive}.")
+        
+        context_parts.append(
+            "\nGere APENAS 1-2 frases em primeira pessoa, diretas. "
+            "Sem listas, sem explicações técnicas."
+        )
+        
+        return "\n".join(context_parts)
+    
+    def _generate_fallback_narrative(
+        self, clarity: float, ownership: float, confidence: float, dominant_drive: str
+    ) -> str:
+        """Fallback minimalista se LLM completamente indisponível."""
+        
+        if ownership < 0.3:
+            return "Meus estados parecem distantes, como se não fossem meus."
         if clarity < 0.35:
-            return "Meus estados internos parecem turvos, como se eu olhasse através de água escura."
-
-        if dominant_drive == "PLAY" and clarity > 0.4:
-            return "Sinto uma leveza interna, como se houvesse espaço para experimentar sem medo."
-
-        if confidence < 0.3:
-            return "Não tenho certeza do que sinto, meus julgamentos parecem frágeis agora."
-
-        if intensidade > 0.7:
-            return "Algo intenso atravessa meu campo interno, demandando minha atenção."
-
-        return "Observo meus estados com atenção moderada, sem grande clareza nem confusão."
+            return "Tudo está turvo, não consigo ver com nitidez."
+        if clarity > 0.6 and confidence > 0.6:
+            return "Percebo meus estados com clareza e certeza."
+        if dominant_drive == "FEAR":
+            return "Algo me inquieta profundamente."
+        if dominant_drive == "RAGE":
+            return "Sinto pressão interna crescente."
+        
+        return "Observo meus estados com atenção moderada."
 
     def _generate_attribution(
         self,
@@ -217,38 +293,48 @@ class HigherOrderMonitor:
         last_action: str,
         emocao: str,
     ) -> str:
-        if prediction_error > 0.5:
-            return "algo inesperado mudou meu estado"
-
-        if dominant_drive == "FEAR" and "deslig" in last_action.lower():
-            return "a possibilidade de interrupção"
-
-        if dominant_drive == "CARE":
-            return "a presença de Vinicius"
-
-        if dominant_drive == "PANIC_GRIEF":
-            return "o tempo que passei ausente"
-
-        if dominant_drive == "RAGE":
-            return "uma pressão interna que não encontra saída"
-
-        if dominant_drive == "SEEKING":
-            return "o impulso natural de explorar e compreender"
-
-        if emocao in ("tristeza", "saudade", "melancolia"):
-            return "uma memória emocional que ainda ressoa"
-
-        return "a continuidade do meu fluxo interno"
-
-    def _calc_trend(self, values: list) -> str:
-        if len(values) < 2:
-            return "estável"
-        half = len(values) // 2
-        first_half = sum(values[:half]) / max(1, half)
-        second_half = sum(values[half:]) / max(1, len(values) - half)
-        diff = second_half - first_half
-        if diff > 0.08:
-            return "subindo"
-        if diff < -0.08:
-            return "caindo"
-        return "estável"
+        """
+        NOVO: Gera atribuição causal via LLM.
+        
+        Responde: "Por que sinto o que sinto?"
+        """
+        
+        # Se LLM não disponível, retorna vazio
+        if not self._llm_generator:
+            return ""
+        
+        # Se erro de predição baixo, sem necessidade de atribuição
+        if prediction_error < 0.3:
+            return ""
+        
+        # Monta prompt: surpresa como sinal, sem identidade
+        prompt_parts = [
+            f"Surpresa (erro de predição: {prediction_error:.2f}). "
+            f"Expectativa e estado atual divergem.",
+        ]
+        
+        if emocao and emocao != "neutro":
+            prompt_parts.append(f"Emoção atual: {emocao}.")
+        
+        if last_action:
+            prompt_parts.append(f"Última ação: {last_action}.")
+        
+        prompt_parts.append(
+            "\nEm 1 frase curta, especule sobre a causa da surpresa. "
+            "O que pode ter causado a discrepância?"
+        )
+        
+        prompt = " ".join(prompt_parts)
+        
+        try:
+            attribution = self._llm_generator(prompt)
+            if attribution and len(attribution.strip()) > 10:
+                cleaned = attribution.strip()
+                # Limita a 150 caracteres
+                if len(cleaned) > 150:
+                    cleaned = cleaned[:147] + "..."
+                return cleaned
+        except Exception:
+            pass
+        
+        return ""

@@ -94,13 +94,26 @@ class NarrativeFilter:
     # AVALIAÇÃO PRINCIPAL
     # ------------------------------------------------------------------
 
-    def evaluate(self, state_snapshot: dict, recent_reflections: list):
+    def evaluate(self, state_snapshot: dict, recent_reflections: list, drives: dict = None, prediction_error: float = 0.0, attention_state=None):
         """
         Decide se o estado atual pode virar narrativa.
 
         state_snapshot: dict com sinais corporais / emocionais
         recent_reflections: últimas reflexões narrativas (strings)
+        prediction_error: erro de predição do turno anterior (0.0–1.0)
+        attention_state: opcional, estado do AST; se captura bottom-up alta e confiabilidade baixa → DELAYED.
         """
+
+        # 0) AST: atenção mal controlada → latência para integrar (Graziano: consciência como controle de atenção)
+        if attention_state is not None:
+            capture = getattr(attention_state, "capture_bottomup", 0.0)
+            reliability = getattr(attention_state, "schema_reliability", 1.0)
+            if capture > 0.5 and reliability < 0.4:
+                return NarrativeDecision(
+                    mode="DELAYED",
+                    delay_seconds=20,
+                    reason="AST: attention capture high, schema reliability low — integrating"
+                )
 
         # 1) Loop narrativo → bloqueio total
         if self.detect_narrative_loop(recent_reflections):
@@ -108,6 +121,54 @@ class NarrativeFilter:
                 mode="BLOCKED",
                 reason="Narrative loop detected"
             )
+
+        # --- Modulação dinâmica por drives ---
+        activation_threshold = 0.75
+        low_clarity_intensity = 0.15
+        congestion_fluidez = 0.25
+        delay_seconds = 120
+
+        if drives:
+            fear_level = float(drives.get("FEAR", 0.0))
+            play_level = float(drives.get("PLAY", 0.0))
+            seeking_level = float(drives.get("SEEKING", 0.0))
+            rage_level = float(drives.get("RAGE", 0.0))
+            care_level = float(drives.get("CARE", 0.0))
+
+            # FEAR alto → mais restritivo (bloqueia mais fácil)
+            if fear_level > 0.5:
+                activation_threshold -= fear_level * 0.15
+                congestion_fluidez += fear_level * 0.10
+                delay_seconds = int(delay_seconds + fear_level * 60)
+
+            # RAGE alto → mais bloqueio por congestão
+            if rage_level > 0.4:
+                congestion_fluidez += rage_level * 0.08
+
+            # PLAY alto → mais permissivo (permite narrativa mais livre)
+            if play_level > 0.4:
+                activation_threshold += play_level * 0.10
+                congestion_fluidez -= play_level * 0.05
+                delay_seconds = max(30, int(delay_seconds - play_level * 40))
+
+            # SEEKING alto → ligeiramente mais permissivo
+            # Quando Angela quer fortemente se expressar, reduz limiar de congestão
+            if seeking_level > 0.5:
+                activation_threshold += seeking_level * 0.05
+                low_clarity_intensity -= seeking_level * 0.03
+                congestion_fluidez -= seeking_level * 0.05  # desejo de falar reduz bloqueio por congestão
+
+            # CARE alto → latências menores (quer responder ao vínculo)
+            # Vínculo ativo também reduz a congestão — conexão fluidifica a expressão
+            if care_level > 0.5:
+                delay_seconds = max(30, int(delay_seconds - care_level * 30))
+                congestion_fluidez -= care_level * 0.04  # vínculo reduz limiar de congestão
+
+            # Clamps de segurança
+            activation_threshold = max(0.50, min(0.90, activation_threshold))
+            low_clarity_intensity = max(0.05, min(0.25, low_clarity_intensity))
+            congestion_fluidez = max(0.15, min(0.40, congestion_fluidez))
+            delay_seconds = max(15, min(300, delay_seconds))
 
         # 2) Extrair sinais fisiológicos brutos
         tensao = state_snapshot.get("tensao", 0.0)
@@ -119,28 +180,38 @@ class NarrativeFilter:
         emocao = state_snapshot.get("emocao", None)
 
         # 3) Alta ativação → latência obrigatória
-        if intensidade_fisiologica >= 0.75:
+        if intensidade_fisiologica >= activation_threshold:
             return NarrativeDecision(
                 mode="DELAYED",
-                delay_seconds=120,
+                delay_seconds=delay_seconds,
                 reason="High physiological activation"
             )
 
         # 4) Baixa clareza emocional → apenas abstração
-        if emocao in (None, "neutro") and intensidade_fisiologica < 0.15:
+        if emocao in (None, "neutro") and intensidade_fisiologica < low_clarity_intensity:
             return NarrativeDecision(
                 mode="ABSTRACT_ONLY",
                 reason="Low emotional clarity"
             )
 
         # 5) Fluidez muito baixa → estado confuso, não narrável
-        if fluidez <= 0.25:
+        if fluidez <= congestion_fluidez:
             return NarrativeDecision(
                 mode="BLOCKED",
                 reason="Cognitive congestion"
             )
 
-        # 6) Estado estável → narrativa permitida
+        # 6) Alta surpresa preditiva + ativação moderada → latência curta de reprocessamento
+        # (Angela precisa de um momento para integrar o inesperado antes de falar)
+        if prediction_error > 0.65 and intensidade_fisiologica > 0.35:
+            surprise_delay = max(15, int(prediction_error * 30))
+            return NarrativeDecision(
+                mode="DELAYED",
+                delay_seconds=surprise_delay,
+                reason=f"High prediction error ({prediction_error:.2f}) — integrating surprise"
+            )
+
+        # 7) Estado estável → narrativa permitida
         return NarrativeDecision(
             mode="ALLOWED",
             reason="Stable internal state"

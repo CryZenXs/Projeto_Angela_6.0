@@ -61,6 +61,23 @@ class WorkspaceState:
         self.integration: float = 0.5
         self.prediction_error: float = 0.0
         self.clarity: float = 0.5
+        # Marcador Somático (Damasio 1994): estado corporal médio de situações similares
+        self.somatic_marker: dict = {}
+        # Attention Schema (AST): viés top-down por source/tags para o próximo tick
+        self.attention_bias: dict = {}
+
+
+# Mapeamento de chaves Panksepp → semânticas internas do workspace.
+# Angela.py alimenta update_state(drives=...) com chaves Panksepp (FEAR, SEEKING...)
+# mas decide_action() e _contextual_bonus() esperam chaves semânticas (medo, curiosidade...).
+_PANKSEPP_TO_SEMANTIC = {
+    "FEAR":         "medo",
+    "SEEKING":      "curiosidade",
+    "CARE":         "afeto",
+    "PANIC_GRIEF":  "sobrevivencia",
+    "RAGE":         "raiva",
+    "PLAY":         "leveza",
+}
 
 
 class GlobalWorkspace:
@@ -101,26 +118,56 @@ class GlobalWorkspace:
         for c in self.candidates:
             score = c.salience * c.confidence
             score += self._contextual_bonus(c)
+            # AST: multiplicador top-down por source e tags (Graziano — modelo para controle)
+            bias = self.state.attention_bias.get(c.source, 1.0)
+            for tag in (c.tags or []):
+                bias *= self.state.attention_bias.get(tag, 1.0)
+            score *= max(0.1, bias)
             if score > best_score:
                 best_score = score
                 best = c
 
         return best
 
+    def _resolve_drives(self) -> dict:
+        """
+        Traduz drives do formato Panksepp para semântico se necessário.
+
+        Angela.py alimenta state.drives com chaves Panksepp (FEAR, SEEKING, CARE...).
+        decide_action() e _contextual_bonus() precisam das chaves semânticas
+        (medo, curiosidade, afeto...) para funcionar corretamente.
+        """
+        raw = self.state.drives
+        if not any(k in _PANKSEPP_TO_SEMANTIC for k in raw):
+            return raw  # já no formato semântico
+        return {_PANKSEPP_TO_SEMANTIC.get(k, k.lower()): float(v) for k, v in raw.items()}
+
     def _contextual_bonus(self, candidate: Candidate) -> float:
-        """Calcula bônus de saliência baseado no contexto atual."""
+        """Calcula bônus de saliência baseado no contexto atual (drives traduzidos)."""
         bonus = 0.0
-        drives = self.state.drives
+        drives = self._resolve_drives()  # garante chaves semânticas corretas
         tags = [t.lower() for t in candidate.tags]
 
-        if drives.get("medo", 0) > 0.4 and "ameaça" in tags:
+        # FEAR/medo → aumenta saliência de candidatos de ameaça/trauma
+        if drives.get("medo", 0) > 0.4 and any(t in tags for t in ("ameaça", "trauma")):
             bonus += 0.15
-        if drives.get("curiosidade", 0) > 0.5 and "novidade" in tags:
+        # SEEKING/curiosidade → bônus para memórias e novidades
+        if drives.get("curiosidade", 0) > 0.5 and any(t in tags for t in ("novidade", "lembranca", "associacao")):
             bonus += 0.10
-        if drives.get("afeto", 0) > 0.5 and "vinculo" in tags:
+        # CARE/afeto → bônus para vínculos e lembranças afetivas
+        if drives.get("afeto", 0) > 0.5 and any(t in tags for t in ("vinculo", "lembranca")):
             bonus += 0.10
-        if drives.get("sobrevivencia", 0) > 0.5 and "perigo" in tags:
+        # PANIC_GRIEF/sobrevivência → urgência máxima em ameaças
+        if drives.get("sobrevivencia", 0) > 0.5 and any(t in tags for t in ("perigo", "ameaça", "trauma")):
             bonus += 0.20
+        # Drive dominante ativo → bônus se candidato usa tag Panksepp lowercase do drive dominante.
+        # Usa state.drives (raw) porque angela.py usa tags Panksepp lowercase como "seeking", "fear".
+        # Não usa o dict traduzido (drives) para evitar mismatch semântico ("curiosidade" vs "seeking").
+        raw_drives = self.state.drives
+        if tags and raw_drives:
+            drive_dom_raw = max(raw_drives, key=lambda k: float(raw_drives.get(k, 0)))
+            if drive_dom_raw and drive_dom_raw.lower() in tags:
+                bonus += 0.08
 
         if self.state.trauma_triggers:
             if any(t in tags for t in ("trauma", "ameaça", "perigo")):
@@ -128,6 +175,17 @@ class GlobalWorkspace:
 
         if self.state.meta.get("incerteza", 0) > 0.6 and "clareza" in tags:
             bonus += 0.08
+
+        # ── Somatic Marker (Damasio 1994): biasa candidatos com valência histórica ──
+        # Se o marcador somático tem valência positiva → bônus para falar/lembrar
+        # Se negativo → bônus para cautela/auto-regulação
+        sm = self.state.somatic_marker
+        if sm and sm.get("reliable", False):
+            valence = sm.get("valence_bias", 0.0)
+            if valence > 0.2 and any(t in tags for t in ("lembranca", "associacao", "somatic_marker")):
+                bonus += min(0.15, valence * 0.3)
+            elif valence < -0.2 and any(t in tags for t in ("somatic_marker",)):
+                bonus += min(0.15, abs(valence) * 0.2)
 
         return bonus
 
@@ -221,9 +279,11 @@ class GlobalWorkspace:
 
         Ações possíveis:
             SPEAK, ASK_CLARIFY, SILENCE, REST_REQUEST,
-            RECALL_MEMORY, SELF_REGULATE
+            RECALL_MEMORY, SELF_REGULATE,
+            ACT:WRITE_NOTE, ACT:SENSE_REFRESH, ACT:SCHEDULE_TIMER,
+            ACT:MEMORY_CONSOLIDATE, ACT:REQUEST_SLEEP
         """
-        drives = self.state.drives
+        drives = self._resolve_drives()  # traduz Panksepp → semântico
         medo = drives.get("medo", 0)
         sobrevivencia = drives.get("sobrevivencia", 0)
 
@@ -248,6 +308,15 @@ class GlobalWorkspace:
 
         return "SPEAK"
 
+    def get_all_actions(self) -> list:
+        """Retorna todas as ações disponíveis (workspace + instrumentais)."""
+        return [
+            "SPEAK", "ASK_CLARIFY", "SILENCE", "REST_REQUEST",
+            "RECALL_MEMORY", "SELF_REGULATE",
+            "ACT:SENSE_REFRESH", "ACT:WRITE_NOTE",
+            "ACT:MEMORY_CONSOLIDATE", "ACT:REQUEST_SLEEP",
+        ]
+
     def _should_rest(self) -> bool:
         """Verifica indicadores de necessidade de descanso."""
         corpo = self.state.corpo_state
@@ -256,10 +325,11 @@ class GlobalWorkspace:
         return tensao > 0.8 or fluidez < 0.2
 
     def _estimate_anxiety(self) -> float:
-        """Estima nível de ansiedade a partir de sinais corporais e drives."""
+        """Estima nível de ansiedade a partir de sinais corporais e drives (traduzidos)."""
         corpo = self.state.corpo_state
         tensao = corpo.get("tensao", 0.5)
-        medo = self.state.drives.get("medo", 0)
+        drives = self._resolve_drives()
+        medo = drives.get("medo", 0)
         fluidez = corpo.get("fluidez", 0.5)
         return min(1.0, (tensao * 0.4 + medo * 0.4 + (1.0 - fluidez) * 0.2))
 

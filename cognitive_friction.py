@@ -16,6 +16,25 @@ from datetime import datetime
 
 DAMAGE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "friction_damage.persistent")
 
+
+def get_persistent_metrics():
+    """
+    Retorna damage e load do arquivo persistente sem modificar estado.
+    Para uso em deep_awake e outros módulos que precisam apenas ler as métricas.
+    """
+    try:
+        if os.path.exists(DAMAGE_FILE):
+            with open(DAMAGE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return {
+                    "damage": float(data.get("damage", 0.0)),
+                    "load": float(data.get("load", 0.0)),
+                }
+    except Exception:
+        pass
+    return {"damage": 0.0, "load": 0.0}
+
+
 class CognitiveFriction:
     def __init__(self,
                  seed=None,
@@ -70,20 +89,22 @@ class CognitiveFriction:
                     # Incrementa contador de sessões
                     data["total_sessions"] = data.get("total_sessions", 0) + 1
                     data["last_updated"] = datetime.now().isoformat()
-                    # Salva incremento
-                    with open(DAMAGE_FILE, "w", encoding="utf-8") as fw:
-                        json.dump(data, fw, ensure_ascii=False, indent=2)
+                    # Salva incremento (usa atomic write para consistência)
+                    from core import atomic_json_write
+                    atomic_json_write(DAMAGE_FILE, data)
             else:
                 self.damage = 0.0
                 self.load = 0.0
                 self.chronic = False
-        except Exception:
+        except Exception as e:
+            print(f"[CognitiveFriction] ⚠️ _load_persistent_state falhou — damage reiniciado em 0: {e}")
             self.damage = 0.0
             self.load = 0.0
             self.chronic = False
 
     def _save_persistent_state(self):
         """Salva damage e load no arquivo persistente"""
+        from core import atomic_json_write
         try:
             data = {
                 "damage": float(self.damage),
@@ -91,17 +112,18 @@ class CognitiveFriction:
                 "chronic": bool(self.chronic),
                 "last_updated": datetime.now().isoformat(),
                 "total_sessions": 1,
-                "version": "2.0.0"  # Incrementado para 2.0
+                "version": "2.0.0"
             }
             if os.path.exists(DAMAGE_FILE):
-                with open(DAMAGE_FILE, "r", encoding="utf-8") as f:
-                    existing = json.load(f)
-                    data["total_sessions"] = existing.get("total_sessions", 1)
-            
-            with open(DAMAGE_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass  # falha silenciosa
+                try:
+                    with open(DAMAGE_FILE, "r", encoding="utf-8") as f:
+                        existing = json.load(f)
+                        data["total_sessions"] = existing.get("total_sessions", 1)
+                except Exception:
+                    pass
+            atomic_json_write(DAMAGE_FILE, data)
+        except Exception as e:
+            print(f"[CognitiveFriction] ⚠️ _save_persistent_state falhou — damage não persistido: {e}")
 
     # --------- Núcleo ---------
     def step(self, *, emotional_intensity=0.0, arousal=0.0, task_complexity=0.5):

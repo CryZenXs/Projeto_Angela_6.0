@@ -1,5 +1,9 @@
 import re
+import os
+import json
 from datetime import datetime
+
+DRIVES_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "drives_state.json")
 
 
 class Drive:
@@ -189,6 +193,41 @@ class DriveSystem:
             "PLAY": Drive("PLAY", baseline=0.2, decay_rate=0.08,
                           stimuli_weights=_PLAY_STIMULI),
         }
+        self.load_state()
+
+    def save_state(self):
+        """Persiste níveis dos drives para sobreviver a shutdowns."""
+        from core import atomic_json_write
+        try:
+            data = {
+                "timestamp": datetime.now().isoformat(),
+                "drives": {}
+            }
+            for name, drive in self.drives.items():
+                data["drives"][name] = {
+                    "level": round(drive.level, 4),
+                    "baseline": drive.baseline,
+                }
+            atomic_json_write(DRIVES_STATE_FILE, data)
+        except Exception as e:
+            print(f"[DriveSystem] ⚠️ save_state falhou — estado emocional não persistido: {e}")
+
+    def load_state(self):
+        """Carrega níveis persistidos dos drives."""
+        try:
+            if not os.path.exists(DRIVES_STATE_FILE):
+                return
+            with open(DRIVES_STATE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            saved_drives = data.get("drives", {})
+            for name, values in saved_drives.items():
+                if name in self.drives:
+                    saved_level = float(values.get("level", self.drives[name].baseline))
+                    current_baseline = self.drives[name].baseline
+                    blended = current_baseline + (saved_level - current_baseline) * 0.7
+                    self.drives[name].level = max(0.0, min(1.0, blended))
+        except Exception as e:
+            print(f"[DriveSystem] ⚠️ load_state falhou — drives resetados para baseline: {e}")
 
     def update(self, *, corpo_state: dict, user_input: str, afetos: dict,
                discontinuity: dict, metacog: dict, friction_metrics: dict):
@@ -260,6 +299,8 @@ class DriveSystem:
         if fluidez > 0.6:
             play.activate("high_fluidez", min(1.0, fluidez))
 
+        self.save_state()
+
     def decay_all(self):
         """Aplica decaimento a todos os drives."""
         for drive in self.drives.values():
@@ -285,9 +326,58 @@ class DriveSystem:
         return _ACTION_TENDENCIES.get(dominant_name,
                                       _ACTION_TENDENCIES["SEEKING"])
 
+    # ── Circumplex Model of Affect — mapeamento drives → valência/arousal ────
+    # Cada drive Panksepp ocupa uma região no espaço afetivo de Russell (1980).
+    # Baseado em: Panksepp (1998) Affective Neuroscience + Russell (1980) circumplex.
+    _DRIVE_CIRCUMPLEX = {
+        "SEEKING":     ( 0.50,  0.70),   # curiosidade ativa: valência+ arousal+
+        "FEAR":        (-0.70,  0.80),   # medo: valência- arousal++
+        "RAGE":        (-0.60,  0.90),   # raiva: valência- arousal máximo
+        "CARE":        ( 0.90,  0.55),   # afeto/cuidado: valência++ arousal médio
+        "PANIC_GRIEF": (-0.80,  0.30),   # luto/pânico: valência-- arousal baixo
+        "PLAY":        ( 0.70,  0.80),   # jogo/prazer: valência+ arousal+
+    }
+
+    def get_circumplex(self) -> tuple:
+        """
+        Retorna (valence, arousal) do estado afetivo ponderado pelos drives ativos.
+
+        A média ponderada pelos níveis de cada drive implementa o
+        Circumplex Model of Affect (Russell 1980) a partir da
+        Affective Neuroscience (Panksepp 1998).
+
+        Returns:
+            (valence: float [-1,+1], arousal: float [0,1])
+        """
+        total_weight = 0.0
+        valence = 0.0
+        arousal = 0.0
+
+        for name, drive in self.drives.items():
+            level = drive.level
+            if level > 0.0 and name in self._DRIVE_CIRCUMPLEX:
+                v, a = self._DRIVE_CIRCUMPLEX[name]
+                valence += v * level
+                arousal += a * level
+                total_weight += level
+
+        if total_weight > 0:
+            valence = max(-1.0, min(1.0, valence / total_weight))
+            arousal = max(0.0,  min(1.0, arousal / total_weight))
+
+        return round(valence, 3), round(arousal, 3)
+
+    def get_circumplex_label(self) -> str:
+        """Retorna rótulo textual do circumplex para uso em prompts."""
+        from senses import EmotionalCircumplex
+        v, a = self.get_circumplex()
+        cx = EmotionalCircumplex(valence=v, arousal=a)
+        return cx.label
+
     def export_state(self) -> dict:
         """Exporta estado completo para serialização."""
         dominant_name, dominant_level = self.get_dominant()
+        v, a = self.get_circumplex()
         return {
             "timestamp": datetime.now().isoformat(),
             "drives": {
@@ -301,4 +391,5 @@ class DriveSystem:
             "dominant": {"name": dominant_name, "level": dominant_level},
             "attention_bias": self.get_attention_bias(),
             "action_tendency": self.get_action_tendency(),
+            "circumplex": {"valence": v, "arousal": a},
         }

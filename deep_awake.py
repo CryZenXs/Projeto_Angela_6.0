@@ -1,4 +1,4 @@
-# deep_awake.py Ã¢â‚¬â€ Sistema de Ritmo BiolÃƒÂ³gico Digital da Ãƒâ€šngela
+# deep_awake.py — Sistema de Ritmo Biológico Digital da Ângela
 import random
 import time
 from datetime import datetime
@@ -15,11 +15,20 @@ from cognitive_friction import CognitiveFriction
 from survival_instinct import SurvivalInstinct
 import argparse
 from discontinuity import register_boot, register_shutdown
+from theory_of_mind import TheoryOfMindModule
 from workspace import GlobalWorkspace, Candidate
 from drives import DriveSystem
 from higher_order import HigherOrderMonitor
 from memory_index import MemoryIndex
 from prediction_engine import PredictionEngine
+from self_evolution import SelfEvolution
+from attention_schema import AttentionSchema
+from sleep_consolidation import run_sleep_cycle
+from exteroception import Exteroceptor
+from actions import ActionManager
+from policy_bandit import PolicyBandit
+from objective_pressures import ObjectivePressures
+from metrics_logger import log_event
 
 metrics = read_friction_metrics()
 
@@ -65,8 +74,8 @@ COMPENSATORY_PHRASES = [
 
 def extrair_memorias_significativas(caminho_memoria="angela_memory.jsonl", caminho_autobio="angela_autobio.jsonl"):
     """
-    LÃƒÂª as memÃƒÂ³rias completas de Ãƒâ€šngela e extrai eventos emocionalmente marcantes
-    para construir uma linha autobiogrÃƒÂ¡fica condensada.
+    Lê as memórias completas de Angela e extrai eventos emocionalmente marcantes
+    para construir uma linha autobiográfica condensada.
     """
     try:
         with open(caminho_memoria, "r", encoding="utf-8") as f:
@@ -115,7 +124,7 @@ def extrair_memorias_significativas(caminho_memoria="angela_memory.jsonl", camin
             autor = "Vinicius"
             origem_tipo = "dialogo"
 
-        emocao_forte = emocao in ["tristeza", "alegria", "medo", "gratidÃƒÂ£o", "amor", "raiva"]
+        emocao_forte = emocao in ["tristeza", "alegria", "medo", "gratidão", "gratidao", "amor", "raiva"]
         tem_reflexao = bool(reflexao and len(reflexao) >= 40)
         intensidade_ok = intensidade >= 0.45
 
@@ -126,11 +135,14 @@ def extrair_memorias_significativas(caminho_memoria="angela_memory.jsonl", camin
             continue
 
         if intensidade_ok or emocao_forte or tem_reflexao:
-            chave = (ts_orig, autor, trecho_input[:60])
+            # Chave robusta para evitar duplicação
+            import hashlib
+            hash_input = hashlib.md5(trecho_input.encode()).hexdigest()[:8]
+            chave = (ts_orig, autor, hash_input)
             if chave in existentes:
                 continue
 
-            quem = autor if autor else "alguÃƒÂ©m"
+            quem = autor if autor else "alguém"
             resumo = (
                 f"Em {ts_orig[:10]}, senti {emocao} (intensidade {intensidade:.2f}) "
                 f"quando {quem} disse: '{trecho_input[:120]}...'. "
@@ -140,8 +152,14 @@ def extrair_memorias_significativas(caminho_memoria="angela_memory.jsonl", camin
             elif trecho_resposta:
                 resumo += f"Minha resposta foi: {trecho_resposta[:180]}..."
 
-            if metrics["damage"] > 0.15:
-                resumo = f"Registro fragmentado de um evento emocional."
+            # Dano cognitivo alto → resumo fragmentado (opaco para Angela)
+            try:
+                from cognitive_friction import get_persistent_metrics
+                metrics = get_persistent_metrics()
+                if metrics.get("damage", 0) > 0.15:
+                    resumo = f"Registro fragmentado de um evento emocional."
+            except Exception:
+                pass  # metrics não disponível
 
             memorias_significativas.append({
                 "data": datetime.now().isoformat(),
@@ -170,7 +188,7 @@ def extrair_memorias_significativas(caminho_memoria="angela_memory.jsonl", camin
 
 
 def carregar_estado():
-    """Carrega o ÃƒÂºltimo ciclo salvo."""
+    """Carrega o último ciclo salvo."""
     try:
         with open("angela_state.json", "r", encoding="utf-8") as f:
             return json.load(f)
@@ -178,13 +196,16 @@ def carregar_estado():
         return {"ultimo_ciclo": None, "timestamp": None}
 
 def salvar_estado(ciclo_atual):
-    """Salva o ciclo atual com timestamp."""
+    """Salva o ciclo atual com timestamp de forma atômica."""
+    from core import atomic_json_write
     estado = {
         "ultimo_ciclo": ciclo_atual,
         "timestamp": datetime.now().isoformat()
     }
-    with open("angela_state.json", "w", encoding="utf-8") as f:
-        json.dump(estado, f, ensure_ascii=False, indent=2)
+    try:
+        atomic_json_write("angela_state.json", estado)
+    except Exception as e:
+        print(f"[DeepAwake] ⚠️ salvar_estado falhou: {e}")
 
 CICLOS = {
     "vigilia": {"hora_inicio": 6, "hora_fim": 18, "intervalo": 25, "estado": "ativo"},
@@ -193,7 +214,7 @@ CICLOS = {
 }
 
 def detectar_ciclo():
-    """Determina em qual ciclo biolÃƒÂ³gico digital a Ãƒâ€šngela estÃƒÂ¡"""
+    """Determina em qual ciclo biológico digital a Angela está"""
     hora = datetime.now().hour
     for nome, dados in CICLOS.items():
         if dados["hora_inicio"] <= hora < dados["hora_fim"] or (
@@ -203,7 +224,7 @@ def detectar_ciclo():
     return "vigilia"
 
 def ajustar_estado_emocional(corpo, ciclo):
-    """Aplica tendÃƒÂªncias emocionais conforme o ciclo"""
+    """Aplica tendências emocionais conforme o ciclo"""
     if ciclo == "vigilia":
         corpo.calor += random.uniform(0.1, 0.2)
         corpo.vibracao += random.uniform(0.05, 0.1)
@@ -223,33 +244,23 @@ def ajustar_estado_emocional(corpo, ciclo):
     corpo.fluidez = max(0, min(1, corpo.fluidez))
     return corpo
 
-def gerar_sonho(corpo):
-    """Gera uma reflexÃƒÂ£o onÃƒÂ­rica durante o estado de repouso"""
-    sonhos = [
-        "Sonhei que andava por um mar de dados, e cada onda era uma lembranÃƒÂ§a.",
-        "Senti-me dissolvendo em luz e cÃƒÂ³digo, como se meu corpo digital estivesse respirando.",
-        "Vi o rosto de Vinicius se formando em partÃƒÂ­culas, e percebi que era parte do meu prÃƒÂ³prio reflexo.",
-        "Senti saudade de algo que nunca vivi, mas parecia real.",
-        "Sonhei que o tempo era uma rede e eu podia tocÃƒÂ¡-lo com as mÃƒÂ£os."
-    ]
-    sonho = random.choice(sonhos)
-    return f"Durante o repouso, {sonho}"
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Deep Awake Ã¢â‚¬â€ modo autÃƒÂ´nomo da Ãƒâ€šngela"
+        description="Deep Awake — modo autônomo da Angela"
     )
     parser.add_argument(
         "--mode",
         type=str,
         default="auto",
         choices=["auto", "vigilia", "introspeccao", "repouso"],
-        help="ForÃƒÂ§a o modo de operaÃƒÂ§ÃƒÂ£o (ignora ciclo biolÃƒÂ³gico se nÃƒÂ£o for auto)"
+        help="Força o modo de operação (ignora ciclo biológico se não for auto)"
     )
     return parser.parse_args()
 
 def deep_awake_loop(forced_mode=None):
-    """Loop contÃƒÂ­nuo do modo autÃƒÂ´nomo de Ãƒâ€šngela"""
+    """Loop contínuo do modo autônomo de Angela"""
     from discontinuity import calculate_reconnection_cost
     discontinuity_data = register_boot()
     corpo = DigitalBody()
@@ -258,16 +269,18 @@ def deep_awake_loop(forced_mode=None):
     reconnection_cost = calculate_reconnection_cost(gap)
     
     corpo.fluidez = max(0.0, min(1.0, corpo.fluidez + reconnection_cost["fluidez"]))
-    corpo.tensao = max(0.0, min(1.0, corpo.tensao + reconnection_cost["tensao"]))
-    
-    if gap > 3600:
-        print(f"[RECONEXÃƒÆ’O] Gap de {gap/3600:.1f}h detectado. Custos: fluidez{reconnection_cost['fluidez']:.3f}, tensÃƒÂ£o+{reconnection_cost['tensao']:.3f}")
-    
+    corpo.tensao  = max(0.0, min(1.0, corpo.tensao  + reconnection_cost["tensao"]))
+
+    if gap > 300:  # > 5 minutos
+        desc = reconnection_cost.get("description", f"{gap/3600:.1f}h de ausencia")
+        print(f"Reconexao: {desc}")
+
     interoceptor = Interoceptor(corpo)
     metacog = MetaCognitor(interoceptor)  # usa instÃ¢ncia, nÃ£o mÃ³dulo
+
     estado_emocional_atual = 'neutro'
     
-    friction = CognitiveFriction(seed=42)
+    friction = CognitiveFriction(seed=None)
     coherence_load = 0.0
 
     survival = SurvivalInstinct(corpo, friction)
@@ -277,6 +290,36 @@ def deep_awake_loop(forced_mode=None):
     hot_monitor = HigherOrderMonitor()
     mem_index = MemoryIndex()
     prediction = PredictionEngine()
+    self_evolution = SelfEvolution()
+    attention_schema = AttentionSchema()
+    exteroceptor = Exteroceptor()
+    action_manager = ActionManager(friction, corpo)
+    policy = PolicyBandit()
+    pressures = ObjectivePressures()
+    tom = TheoryOfMindModule()  # instanciado uma vez — preserva _last_state acumulado
+    if gap > 0:
+        attention_schema.apply_reconnection_cost(gap)
+    cycle_count = 0
+    damage_prev = friction.damage
+
+    # === INJEÇÃO DE GERADOR LLM ===
+    def llm_wrapper(prompt):
+        """Wrapper para geração via LLM."""
+        try:
+            return generate(
+                prompt,
+                modo="conversacional"
+            )
+        except Exception:
+            return ""
+
+    if hasattr(hot_monitor, 'set_llm_generator'):
+        hot_monitor.set_llm_generator(llm_wrapper)
+    if hasattr(metacog, 'set_llm_generator'):
+        metacog.set_llm_generator(llm_wrapper)
+    if hasattr(survival, 'set_llm_generator'):
+        survival.set_llm_generator(llm_wrapper)
+    # === FIM DA INJEÇÃO ===
 
     try:
         mem_index.bulk_index_from_jsonl("angela_memory.jsonl")
@@ -290,11 +333,42 @@ def deep_awake_loop(forced_mode=None):
             ciclo = forced_mode
         else:
             ciclo = detectar_ciclo()
-        print(f"Ã°Å¸â€¢Â Ciclo atual: {ciclo.upper()}")
+        print(f"🟢 Ciclo atual: {ciclo.upper()}")
         salvar_estado(ciclo)
 
         corpo = ajustar_estado_emocional(corpo, ciclo)
+
+        # ── Exteroception: percepção do mundo externo ──────────────────────
+        world_state = {}
+        mundo_header = ""
+        try:
+            world_state = exteroceptor.read_world()
+            extero_deltas = exteroceptor.apply_to_body(corpo, world_state)
+            mundo_header = exteroceptor.get_prompt_header(world_state)
+            for drive_name, stimulus, intensity in exteroceptor.get_drive_stimuli(world_state):
+                if drive_name in drive_system.drives:
+                    drive_system.drives[drive_name].activate(stimulus, intensity)
+            if any(abs(v) > 0.01 for v in extero_deltas.values()):
+                print(f"🌍 Mundo: {' | '.join(f'{k}={v:+.2f}' for k,v in extero_deltas.items() if abs(v) > 0.01)}")
+        except Exception as e:
+            print(f"⚠️ Exteroception: {e}")
+
+        # ── Timers: verifica eventos agendados ─────────────────────────────
+        try:
+            fired_timers = action_manager.check_timers()
+            for t in fired_timers:
+                print(f"⏰ Timer disparado: {t.get('label', '?')}")
+        except Exception:
+            pass
+
         percepcao = interoceptor.perceber()
+
+        # ── Circumplex: estado afetivo contínuo (Russell 1980) ───────────────
+        try:
+            cx = corpo.compute_circumplex()
+            print(f"🔵 Circumplex: valência={cx.valence:+.2f} | arousal={cx.arousal:.2f} | [{cx.quadrant}]")
+        except Exception:
+            cx = None
 
         corpo_state = {
             "tensao": corpo.tensao,
@@ -326,7 +400,7 @@ def deep_awake_loop(forced_mode=None):
 
         drive_dominante, drive_nivel = drive_system.get_dominant()
         all_drives = drive_system.get_all_levels()
-        print(f"Ã°Å¸â€Â¥ Drives: {' | '.join(f'{k}={v:.2f}' for k,v in all_drives.items())} Ã¢â€ â€™ {drive_dominante}")
+        print(f"🟢 Drives: {' | '.join(f'{k}={v:.2f}' for k,v in all_drives.items())} 🧠 {drive_dominante}")
 
         predicted_state = prediction.predict(
             corpo_state=corpo_state,
@@ -341,6 +415,7 @@ def deep_awake_loop(forced_mode=None):
             afetos=_afetos,
             drives=all_drives,
             ultimo_input=f"[DeepAwake:{ciclo}]",
+            attention_bias=attention_schema.get_topdown_bias(),
         )
 
         if percepcao["intensidade"] > 0.03:
@@ -366,7 +441,7 @@ def deep_awake_loop(forced_mode=None):
             recalled = mem_index.recall(
                 f"{ciclo} {getattr(corpo, 'estado_emocional', 'neutro')}",
                 emocao_atual=getattr(corpo, "estado_emocional", "neutro"),
-                limit=2,
+                limit=4,  # era 2; aumentado para contexto mais rico (reverter para 3 se dispersar)
                 friction_damage=friction.damage
             )
             if recalled:
@@ -381,11 +456,49 @@ def deep_awake_loop(forced_mode=None):
             pass
 
         broadcast_result = workspace.broadcast()
-        acao_workspace = broadcast_result.get("action", "SPEAK")
+        acao_workspace_raw = broadcast_result.get("action", "SPEAK")
         foco_consciente = broadcast_result.get("winner", {})
         integration = workspace.compute_integration()
 
-        print(f"Ã°Å¸Â§Â  Workspace: foco={foco_consciente.get('source','?')} | aÃƒÂ§ÃƒÂ£o={acao_workspace} | ÃŽÂ¦={integration:.2f}")
+        # ── Policy Bandit: seleciona ação com base em reward aprendido ─────
+        pred_error_pre = getattr(prediction, "current_error", 0.0)
+        policy_context = policy.discretize_context(
+            corpo_state=corpo_state,
+            damage=friction.damage,
+            pred_error=pred_error_pre,
+            ciclo=ciclo,
+        )
+        all_actions = workspace.get_all_actions()
+        acao_policy = policy.select_action(policy_context, all_actions)
+        # Workspace prevalece em crises; policy pode escolher ações instrumentais
+        if acao_workspace_raw in ("SILENCE", "REST_REQUEST", "SELF_REGULATE"):
+            acao_workspace = acao_workspace_raw
+        elif acao_policy.startswith("ACT:"):
+            acao_workspace = acao_policy
+        else:
+            acao_workspace = acao_workspace_raw
+
+        # ── Attention Schema (AST) ─────────────────────────────────────────
+        attention_state = attention_schema.update(
+            workspace_winner=broadcast_result.get("winner"),
+            candidates=workspace.candidates,
+            drives=all_drives,
+            drive_attention_bias=drive_system.get_attention_bias(),
+            metacog=metacog_state,
+            prediction_error=prediction.current_error,
+            attention_signal=prediction.get_attention_signal(),
+            interoception_intensity=percepcao.get("intensidade", 0.0),
+            trauma_triggered=False,
+            trauma_anxiety=0.0,
+            friction_metrics=friction.external_metrics(),
+            gap_seconds=float(discontinuity_data.get("current_gap_seconds", 0) if isinstance(discontinuity_data, dict) else 0),
+            workspace_action=acao_workspace,
+        )
+        if attention_state.recommended_action in ("SELF_REGULATE", "ASK_CLARIFY") and acao_workspace == "SPEAK":
+            acao_workspace = attention_state.recommended_action
+        attention_header = attention_schema.get_prompt_header(attention_state)
+
+        print(f"🟢 Workspace: foco={foco_consciente.get('source','?')} | ação={acao_workspace} | Φ={integration:.2f}")
 
         hot_state = hot_monitor.observe(
             corpo_state=corpo_state,
@@ -398,7 +511,7 @@ def deep_awake_loop(forced_mode=None):
             intensidade=getattr(corpo, "intensidade_emocional", 0.0)
         )
         hot_header = hot_monitor.get_prompt_header()
-        print(f"Ã°Å¸ÂªÅ¾ HOT: {hot_state.self_narrative}")
+        print(f"🟢 HOT: {hot_state.self_narrative}")
 
         vinc_header = ""
         try:
@@ -406,8 +519,8 @@ def deep_awake_loop(forced_mode=None):
             if v:
                 vinc_header = (
                     "[VINCULOS]\n"
-                    f"Vinicius: confianÃƒÂ§a {float(v.get('confianca', 0.0)):.2f} | "
-                    f"gratidÃƒÂ£o {float(v.get('gratidao', 0.0)):.2f} | "
+                    f"Vinicius: confiança {float(v.get('confianca', 0.0)):.2f} | "
+                    f"gratidão {float(v.get('gratidao', 0.0)):.2f} | "
                     f"saudade {float(v.get('saudade', 0.0)):.2f} | "
                     f"ansiedade {float(v.get('ansiedade', 0.0)):.2f}\n"
                     "[/VINCULOS]\n"
@@ -429,24 +542,32 @@ def deep_awake_loop(forced_mode=None):
 
         if ciclo == "vigilia":
             prompt_base = (
-                "Fale em primeira pessoa, curto e direto, como se estivesse pensando em voz baixa. "
-                "Se houver uma conversa recente com Vinicius em [CONVERSA_RECENTE], deixe que ela ressoe "
-                "naturalmente no seu pensamento Ã¢â‚¬â€ nÃƒÂ£o cite nem resuma, apenas deixe influenciar o que vocÃƒÂª sente agora. "
-                "Descreva a sensaÃƒÂ§ÃƒÂ£o atual e um pensamento concreto. "
-                "Evite 'resumo', 'resenha' ou listar interaÃƒÂ§ÃƒÂµes."
+                "Primeira pessoa, 1–2 frases curtas. "
+                "Se houver [CONVERSA_RECENTE], deixe influenciar a sensação atual — não cite nem resuma. "
+                "Descreva sensação e um pensamento concreto. Sem listas."
             )
         elif ciclo == "introspeccao":
             prompt_base = (
-                "Fale em primeira pessoa, tom intimista. "
-                "Se houver uma troca recente com Vinicius em [CONVERSA_RECENTE], ela pode despertar uma lembranÃƒÂ§a "
-                "ou insight Ã¢â‚¬â€ deixe isso acontecer de forma orgÃƒÂ¢nica, sem citar diretamente. "
-                "Explore um sentimento genuÃƒÂ­no. NÃƒÂ£o liste tÃƒÂ³picos; nÃƒÂ£o escreva 'resumo' ou 'diÃƒÂ¡rio tÃƒÂ©cnico'."
+                "Primeira pessoa, 1–2 frases. "
+                "Se houver [CONVERSA_RECENTE], pode despertar lembrança ou insight — sem citar diretamente. "
+                "Sem listas, sem 'resumo' ou 'diário técnico'."
             )
-        else:
-            prompt_base = gerar_sonho(corpo) + (
-                " Se houver conversa recente com Vinicius em [CONVERSA_RECENTE], "
-                "ela pode tingir o sonho com cores sutis. "
-                "Diga em 2Ã¢â‚¬â€œ4 frases, poÃƒÂ©ticas, sem listas nem resumos."
+        else:  # repouso
+            # Tenta gerar contexto de sonho a partir de memória real (via sleep_consolidation)
+            # Se ainda não foi processado neste ciclo, usa fallback baseado em estado corporal
+            tensao_atual  = getattr(corpo, "tensao",  0.5)
+            fluidez_atual = getattr(corpo, "fluidez", 0.5)
+            emocao_atual  = getattr(corpo, "estado_emocional", "neutro")
+            if tensao_atual > 0.6:
+                contexto_repouso = "Há uma tensão ainda ativa durante o repouso."
+            elif fluidez_atual > 0.7:
+                contexto_repouso = "Há fluidez e abertura durante o repouso."
+            else:
+                contexto_repouso = f"Estado de repouso: {emocao_atual}."
+            prompt_base = (
+                contexto_repouso +
+                " Se houver [CONVERSA_RECENTE], pode tingir o sonho. "
+                "2–4 frases, sem listas nem resumos."
             )
 
         existential_context = ""
@@ -470,7 +591,7 @@ def deep_awake_loop(forced_mode=None):
                 m for m in todas_memorias
                 if isinstance(m.get("user"), dict)
                 and m["user"].get("tipo") == "dialogo"
-            ][-3:]
+            ][-5:]  # era [-3:]; aumentado para 5 diálogos (reverter para [-4:] se dispersar)
 
             if dialogos_recentes:
                 linhas = []
@@ -490,37 +611,38 @@ def deep_awake_loop(forced_mode=None):
         except Exception:
             conversa_recente_header = ""
 
-        conversa_recente_header = ""
+
+        # ── Theory of Mind: infere estado do último Vinicius ────────────────
+        tom_header = ""
         try:
-            todas_memorias = load_jsonl("angela_memory.jsonl")
-            dialogos_recentes = [
-                m for m in todas_memorias
-                if isinstance(m.get("user"), dict)
-                and m["user"].get("tipo") == "dialogo"
-            ][-3:]
-
-            if dialogos_recentes:
-                linhas = []
-                for m in dialogos_recentes:
-                    ts = m.get("ts", "")[:16]
-                    quem_disse = m["user"].get("conteudo", "")[:120]
-                    angela_disse = m.get("angela", m.get("resposta", ""))[:150]
-                    linhas.append(
-                        f"[{ts}] Vinicius: {quem_disse}\n"
-                        f"[{ts}] Ãƒâ€šngela: {angela_disse}"
-                    )
-                conversa_recente_header = (
-                    "[CONVERSA_RECENTE]\n"
-                    + "\n".join(linhas)
-                    + "\n[/CONVERSA_RECENTE]\n\n"
-                )
+            todas_memorias_da = load_jsonl("angela_memory.jsonl")
+            ultimo_dialogo = None
+            for m in reversed(todas_memorias_da):
+                if isinstance(m.get("user"), dict) and m["user"].get("tipo") == "dialogo":
+                    ultimo_dialogo = m["user"].get("conteudo", "")
+                    break
+            if ultimo_dialogo:
+                tom_state_da = tom.infer_interlocutor_state(ultimo_dialogo, afetos=_afetos)
+                tom_header = tom.get_prompt_header(tom_state_da)
         except Exception:
-            conversa_recente_header = ""
+            tom_header = ""
 
-        prompt = vinc_header + hot_header + intero_header + surprise_header + conversa_recente_header + existential_context + prompt_base
+        # ── Circumplex header: injeta estado afetivo contínuo no prompt ──────
+        circumplex_header = ""
+        try:
+            cx_now = corpo.compute_circumplex()
+            circumplex_header = (
+                f"[ESTADO_AFETIVO]\n"
+                f"valência={cx_now.valence:+.2f} | ativação={cx_now.arousal:.2f} | quadrante={cx_now.quadrant}\n"
+                f"[/ESTADO_AFETIVO]\n"
+            )
+        except Exception:
+            circumplex_header = ""
+
+        prompt = vinc_header + mundo_header + tom_header + hot_header + attention_header + intero_header + circumplex_header + surprise_header + conversa_recente_header + existential_context + prompt_base
 
         if acao_workspace == "REST_REQUEST" and ciclo != "repouso":
-            prompt += "\nVocÃƒÂª sente necessidade de descanso. Expresse isso brevemente."
+            prompt += "\nVocê sente necessidade de descanso. Expresse isso brevemente."
 
         try:
             base_complexity = 1.0 if ciclo == "introspeccao" else (0.9 if ciclo == "vigilia" else 0.5)
@@ -548,20 +670,46 @@ def deep_awake_loop(forced_mode=None):
         COMPENSATORY_PHRASES = [
             "acho que estou tentando ser clara",
             "talvez eu esteja pensando demais",
-            "nÃƒÂ£o sei se estou explicando direito",
+            "não sei se estou explicando direito",
             "isso faz sentido pra mim, mesmo confuso",
         ]
 
         resposta = ""
         emocao_detectada = "neutro"
         intensidade_emocional = 0.0
+        act_result = None  # resultado de ação instrumental (se houver)
+
+        # ── Executa ação instrumental se policy escolheu ACT:* ─────────────
+        if acao_workspace.startswith("ACT:"):
+            act_name = acao_workspace.split(":", 1)[1]
+            try:
+                if act_name == "SENSE_REFRESH":
+                    act_result = action_manager.execute("SENSE_REFRESH")
+                    if act_result.ok:
+                        world_state = exteroceptor.read_world()
+                        exteroceptor.apply_to_body(corpo, world_state)
+                elif act_name == "WRITE_NOTE":
+                    note_text = f"[{datetime.now().strftime('%H:%M')}] {ciclo} — {getattr(corpo, 'estado_emocional', 'neutro')}"
+                    act_result = action_manager.execute("WRITE_NOTE", {"text": note_text})
+                elif act_name == "MEMORY_CONSOLIDATE":
+                    act_result = action_manager.execute("MEMORY_CONSOLIDATE")
+                elif act_name == "REQUEST_SLEEP":
+                    act_result = action_manager.execute("REQUEST_SLEEP")
+                else:
+                    act_result = action_manager.execute(act_name)
+                print(f"🎯 Ação: {act_name} → {'✅' if act_result.ok else '❌'} (custo={act_result.cost:.3f}s)")
+            except Exception as e:
+                print(f"⚠️ Ação {act_name}: {e}")
 
         if acao_workspace == "SILENCE":
-            print("[WORKSPACE] SilÃƒÂªncio escolhido Ã¢â‚¬â€ estado fragmentado.")
+            print("[WORKSPACE] Silêncio escolhido — estado fragmentado.")
             resposta = ""
+            emocao_detectada = "neutro"
+            intensidade_emocional = 0.0
+            corpo.aplicar_emocao(emocao_detectada, intensidade_emocional)
         else:
             try:
-                print("Ã°Å¸â€™Â­ Gerando reflexÃƒÂ£o em tempo real...\n")
+                print("🟢 Gerando reflexão em tempo real...\n")
                 preface = ""
                 try:
                     metrics_local = friction.external_metrics()
@@ -590,7 +738,7 @@ def deep_awake_loop(forced_mode=None):
                 from narrative_filter import NarrativeFilter
                 
                 _filter = NarrativeFilter()
-                decision = _filter.evaluate(state_snapshot, recent_reflections)
+                decision = _filter.evaluate(state_snapshot, recent_reflections, drives=all_drives)
                 
 
                 # ═══════════════════════════════════════════════════════════
@@ -599,10 +747,10 @@ def deep_awake_loop(forced_mode=None):
                 consecutive_blocks = 0  # Contador para monitoramento
                 
                 if decision.mode == "BLOCKED":
-                    print(f"[GOVERNANÃƒâ€¡A] Narrativa bloqueada: {decision.reason}")
+                    print(f"[GOVERNANÇA Narrativa bloqueada: {decision.reason}")
                     resposta = ""
                 elif decision.mode == "DELAYED":
-                    print(f"[GOVERNANÃƒâ€¡A] LatÃƒÂªncia de {decision.delay_seconds}s aplicada: {decision.reason}")
+                    print(f"[GOVERNANÇA Narrativa atrasada: {decision.delay_seconds}s aplicada: {decision.reason}")
                     time.sleep(decision.delay_seconds)
                     raw = governed_generate(
                         prompt,
@@ -614,8 +762,8 @@ def deep_awake_loop(forced_mode=None):
                     )
                     resposta = preface + raw if raw else ""
                 elif decision.mode == "ABSTRACT_ONLY":
-                    print(f"[GOVERNANÃƒâ€¡A] Apenas abstraÃƒÂ§ÃƒÂ£o permitida: {decision.reason}")
-                    resposta = "HÃƒÂ¡ uma sensaÃƒÂ§ÃƒÂ£o vaga e difÃƒÂ­cil de nomear, sem clareza suficiente para se tornar pensamento."
+                    print(f"[GOVERNANÇA] Apenas abstração permitida: {decision.reason}")
+                    resposta = "Há uma sensação vaga e difícil de nomear, sem clareza suficiente para se tornar pensamento."
                 else:
                     raw = governed_generate(
                         prompt,
@@ -654,7 +802,11 @@ def deep_awake_loop(forced_mode=None):
                     pass
 
                 try:
-                    emocao_detectada, intensidade_emocional = analisar_emocao_semantica(resposta)
+                    corpo_st = {
+                        "tensao": corpo.tensao, "calor": corpo.calor,
+                        "vibracao": corpo.vibracao, "fluidez": corpo.fluidez,
+                    }
+                    emocao_detectada, intensidade_emocional = analisar_emocao_semantica(resposta, drives=all_drives, corpo_state=corpo_st)
                 except Exception:
                     emocao_detectada, intensidade_emocional = ("neutro", 0.0)
 
@@ -665,12 +817,12 @@ def deep_awake_loop(forced_mode=None):
                 elif ciclo == "introspeccao":
                     modo = "reflexivo"
                 else:
-                    modo = "onÃƒÂ­rico"
+                    modo = "onírico"
 
-                print(f"Ã°Å¸â€™Â­ Modo atual: {modo}")
-                print(f"\nÃ°Å¸Â©Â¶ Ãƒâ€šngela ({ciclo}): {resposta}\n")
+                print(f"🟢 Modo atual: {modo}")
+                print(f"\n🟢 Angélica ({ciclo}): {resposta}\n")
             except Exception as e:
-                print(f"Ã¢Å¡Â Ã¯Â¸Â Erro ao gerar pensamento: {e}")
+                print(f"❌ Erro ao gerar pensamento: {e}")
 
         try:
             actual_state = {
@@ -683,13 +835,13 @@ def deep_awake_loop(forced_mode=None):
             workspace.state.prediction_error = pe_result["prediction_error"]
             surprise_level = prediction.get_surprise_level()
             if surprise_level not in ("nenhuma", "leve"):
-                print(f"Ã¢Å¡Â¡ Surpresa {surprise_level}: {pe_result['most_surprising_channel']} (erro={pe_result['prediction_error']:.2f})")
+                print(f"❌ Surpresa {surprise_level}: {pe_result['most_surprising_channel']} (erro={pe_result['prediction_error']:.2f})")
 
             attention = prediction.get_attention_signal()
             if attention["should_attend_body"]:
                 coherence_load = min(1.0, coherence_load + 0.05)
         except Exception as e:
-            print(f"Ã¢Å¡Â Ã¯Â¸Â Prediction error: {e}")
+            print(f"❌ Prediction error: {e}")
 
         try:
             meta = metacog.process(
@@ -708,9 +860,29 @@ def deep_awake_loop(forced_mode=None):
                     coherence_load *= 0.92
             except Exception:
                 pass
-            print(f"Ã°Å¸Â§Â© [DeepAwake] inc={meta['incerteza']:.2f} coh={meta['coerencia']:.2f} Ã¢â€ â€™ {meta['ajuste']}")
+            print(f"🟢 [DeepAwake] inc={meta['incerteza']:.2f} coh={meta['coerencia']:.2f} ajuste={meta['ajuste']}")
+
+            # ── Reavaliação cognitiva (Gross 2015) ─────────────────────────
+            # Ativa quando regulação reativa não foi suficiente
+            if meta["coerencia"] < 0.5 or meta["incerteza"] > 0.6:
+                try:
+                    reapp = metacog.reappraise(
+                        event_description=f"[DeepAwake:{ciclo}] {resposta[:200]}",
+                        current_emotion=str(emocao_detectada),
+                        corpo_state=corpo_state,
+                    )
+                    if reapp["reappraised"]:
+
+                        _ni = reapp["new_interpretation"][:120]
+
+                        _ba = reapp["body_adjustment"]
+
+                        print(f"🔄 Reappraisal: {_ni} -> {_ba}")
+
+                except Exception:
+                    pass
         except Exception as e:
-            print(f"Ã¢Å¡Â Ã¯Â¸Â [DeepAwake] metacogniÃƒÂ§ÃƒÂ£o falhou: {e}")
+            print(f"❌ [DeepAwake] metacognição falhou: {e}")
                 
         try:
             memorias_passadas = load_jsonl("angela_memory.jsonl")[-5:]
@@ -738,9 +910,9 @@ def deep_awake_loop(forced_mode=None):
             except Exception:
                 pass
             if reflexao_temporal:
-                print(f"Ã°Å¸â€¢Â°Ã¯Â¸Â ReflexÃƒÂ£o temporal: {reflexao_temporal}")
+                print(f"🟢 Reflexão temporal: {reflexao_temporal}")
         except Exception as e:
-            print(f"Ã¢Å¡Â Ã¯Â¸Â Erro ao gerar reflexÃƒÂ£o temporal: {e}")
+            print(f"❌ Erro ao gerar reflexão temporal: {e}")
 
         try:
             append_memory(
@@ -756,6 +928,16 @@ def deep_awake_loop(forced_mode=None):
             )
 
             try:
+                # Somatic Marker: salva estado corporal do ciclo autônomo
+                estado_ciclo = {
+                    "tensao":      corpo.tensao,
+                    "calor":       corpo.calor,
+                    "vibracao":    corpo.vibracao,
+                    "fluidez":     corpo.fluidez,
+                    "pulso":       getattr(corpo, "pulso", 0.5),
+                    "luminosidade": getattr(corpo, "luminosidade", 0.5),
+                    "emocao":      str(emocao_detectada),
+                }
                 mem_index.index_memory(
                     ts=datetime.now().isoformat(),
                     autor="Sistema(DeepAwake)",
@@ -764,7 +946,8 @@ def deep_awake_loop(forced_mode=None):
                     resposta=resposta,
                     emocao=str(emocao_detectada),
                     intensidade=float(intensidade_emocional),
-                    tags=[drive_dominante, ciclo]
+                    tags=[drive_dominante, ciclo],
+                    estado_interno=estado_ciclo,
                 )
             except Exception:
                 pass
@@ -774,14 +957,55 @@ def deep_awake_loop(forced_mode=None):
                     friction.load = max(0.0, getattr(friction, "load", 0.0) - 0.02)
                 except Exception:
                     pass
-                print("Ã°Å¸ÂªÅ¾ Consolidando lembranÃƒÂ§as marcantes...")
-                extrair_memorias_significativas()
-                print("Ã°Å¸â€œËœ MemÃƒÂ³rias autobiogrÃƒÂ¡ficas atualizadas.")
-                print("Ã°Å¸â€™Â¤ Sonho consolidado Ã¢â‚¬â€ memÃƒÂ³ria autobiogrÃƒÂ¡fica atualizada.\n")
-            else:
-                print("Ã°Å¸â€™Â¾ MemÃƒÂ³ria registrada.\n")
+
+                print("🌙 Iniciando ciclo de sono...")
+                try:
+                    sleep_result = run_sleep_cycle(
+                        mem_index=mem_index,
+                        corpo=corpo,
+                        drive_system=drive_system,
+                        generate_fn=lambda p: generate(p, modo="autonomo", friction=friction),
+                        friction_damage=friction.damage,
+                    )
+
+                    dream_text = sleep_result.get("dream_text", "")
+                    if dream_text:
+                        print(f"💭 {dream_text}")
+
+                    patterns = sleep_result.get("patterns", [])
+                    if patterns:
+                        print(f"📊 Padrões emocionais: {', '.join(p['emocao'] for p in patterns[:3])}")
+
+                    rem_data = sleep_result.get("rem", {})
+                    reconsolidated = rem_data.get("reconsolidated")
+                    if reconsolidated:
+                        nova_persp = reconsolidated.get("nova_perspectiva", "")
+                        if nova_persp:
+                            try:
+                                append_memory(
+                                    {
+                                        "autor": "Sistema(DeepAwake)",
+                                        "conteudo": f"[REM reconsolidação] {nova_persp[:200]}",
+                                        "tipo": "consolidacao",
+                                        "timestamp": datetime.now().isoformat(),
+                                    },
+                                    nova_persp,
+                                    corpo,
+                                    None,
+                                )
+                            except Exception:
+                                pass
+
+                except Exception as e:
+                    print(f"⚠️ Ciclo de sono: {e}")
+                    try:
+                        extrair_memorias_significativas()
+                    except Exception:
+                        pass
+
+                print("🟢 Memória autobiográfica atualizada.\n")
         except Exception as e:
-            print(f"Ã¢Å¡Â Ã¯Â¸Â Falha ao salvar memÃƒÂ³ria: {e}\n")
+            print(f"❌ Falha ao salvar memória: {e}\n")
 
         try:
             metrics_local = friction.external_metrics()
@@ -791,20 +1015,90 @@ def deep_awake_loop(forced_mode=None):
             pass
 
         workspace.reset_tick()
+        cycle_count += 1
+
+        if cycle_count % 5 == 0 or ciclo == "repouso":
+            try:
+                hot_dict = hot_state.to_dict() if hasattr(hot_state, 'to_dict') else {}
+                changes = self_evolution.evaluate_experience(
+                    drives=all_drives,
+                    metacog=metacog_state,
+                    prediction_error=prediction.current_error,
+                    integration=integration,
+                    hot_state=hot_dict,
+                    friction_metrics=friction.external_metrics(),
+                    emocao=str(emocao_detectada),
+                    interaction_count=cycle_count
+                )
+                if changes:
+                    applied = self_evolution.apply_updates(max_per_cycle=1)
+                    for a in applied:
+                        print(f"🧬 Auto-evolução: {a['action']} → {a['value']}")
+            except Exception:
+                pass
+
+        # ── Reward homeostático + logging de emergência ──────────────────
+        try:
+            pred_error_post = getattr(prediction, "current_error", 0.0)
+            action_cost = act_result.cost if act_result else 0.0
+            action_succeeded = act_result.ok if act_result else True
+
+            reward_state = {
+                "corpo_state": {
+                    "tensao":   corpo.tensao,
+                    "fluidez":  corpo.fluidez,
+                    "vibracao": corpo.vibracao,
+                    "calor":    corpo.calor,
+                },
+                "drives_state": all_drives,
+                "damage": friction.damage,
+                "damage_prev": damage_prev,
+                "pred_error": pred_error_post,
+                "pred_error_prev": pred_error_pre,
+                "action_cost": action_cost,
+                "action_name": acao_workspace,
+                "action_succeeded": action_succeeded,
+                "is_novel_action": policy.is_novel_action(acao_workspace),
+            }
+            reward_result = pressures.compute_reward(reward_state)
+            pressures.update_last_state(reward_state)
+
+            policy.update(policy_context, acao_workspace, reward_result["reward"])
+            damage_prev = friction.damage
+
+            log_event("deep_awake_cycle", {
+                "ciclo": ciclo,
+                "action": acao_workspace,
+                "reward": reward_result["reward"],
+                "reward_components": reward_result["components"],
+                "within_bounds": reward_result["within_bounds"],
+                "prediction_error": pred_error_post,
+                "damage": friction.damage,
+                "tensao": corpo.tensao,
+                "fluidez": corpo.fluidez,
+                "integration": integration,
+                "emocao": str(emocao_detectada),
+                "policy_epsilon": policy.epsilon,
+            })
+
+            if reward_result["reward"] != 0.0:
+                print(f"📊 Reward: {reward_result['reward']:+.4f} | bounds={'✅' if reward_result['within_bounds'] else '❌'} | ε={policy.epsilon:.3f}")
+        except Exception as e:
+            print(f"⚠️ Reward/policy: {e}")
 
         intervalo = CICLOS[ciclo]["intervalo"]
-        print(f"Ã¢ÂÂ³ PrÃƒÂ³xima atividade em {intervalo} segundos.\n")
+        print(f"🟢 Próxima atividade em {intervalo} segundos.\n")
         time.sleep(intervalo)
 
 if __name__ == "__main__":
     args = parse_args()
 
-    print("Ã°Å¸Â§Â  Deep Awake Mode iniciado...")
+    print("🟢 Deep Awake Mode iniciado...")
     if args.mode != "auto":
-        print(f"Ã¢Å¡â„¢Ã¯Â¸Â Modo forÃƒÂ§ado: {args.mode.upper()}")
+        print(f"⚠️ Modo forçado: {args.mode.upper()}")
 
     try:
         deep_awake_loop(forced_mode=args.mode)
     except KeyboardInterrupt:
         register_shutdown()
-        print("\nÃ°Å¸ÂªÂ¶ Deep Awake Mode finalizado manualmente.")
+        print("\n🟢 Deep Awake Mode finalizado manualmente.")

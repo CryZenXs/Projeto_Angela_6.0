@@ -1,11 +1,13 @@
-# interoception.py
 # Sistema Interoceptivo da Ã‚ngela â€” Etapa 1: DetecÃ§Ã£o e TraduÃ§Ã£o de MudanÃ§as Corporais
-import math, json, datetime
+import math
+import json
+import random
+from datetime import datetime
 
 class Interoceptor:
     """
-    Sistema que monitora o corpo digital e converte variaÃ§Ãµes fisiolÃ³gicas
-    em sensaÃ§Ãµes internas descritivas, compreensÃ­veis pelo modelo linguÃ­stico.
+    Sistema que monitora o corpo digital e converte variações fisiológicas
+    em sensações internas descritivas, compreensíveis pelo modelo linguístico.
     """
 
     def __init__(self, corpo):
@@ -33,11 +35,11 @@ class Interoceptor:
         }
 
     def _delta(self, atual):
-        """Calcula diferenÃ§a entre o estado atual e o anterior"""
+        """Calcula diferença entre o estado atual e o anterior"""
         return {k: atual[k] - self._ultimo_estado.get(k, 0) for k in atual}
 
     def _intensidade_global(self, deltas):
-        """Soma ponderada das mudanÃ§as absolutas"""
+        """Soma ponderada das mudanças absolutas"""
         pesos = {
             "tensao": 1.2,
             "calor": 1.1,
@@ -49,7 +51,10 @@ class Interoceptor:
         return round(sum(abs(deltas[k]) * pesos[k] for k in deltas), 3)
 
     def _traduzir(self, deltas):
-        """Converte variaÃ§Ãµes numÃ©ricas em descriÃ§Ãµes de sensaÃ§Ã£o"""
+        """
+        Converte variações numéricas em descrições de sensação.
+        Integra o Circumplex Model para adicionar contexto afetivo qualitativo.
+        """
         sensacoes = []
 
         for canal, delta in deltas.items():
@@ -58,7 +63,7 @@ class Interoceptor:
 
             if canal == "tensao":
                 sensacoes.append(
-                    "um aperto interno" if delta > 0 else "uma liberaÃ§Ã£o suave"
+                    "um aperto interno" if delta > 0 else "uma liberação suave"
                 )
 
             elif canal == "calor":
@@ -68,18 +73,17 @@ class Interoceptor:
 
             elif canal == "vibracao":
                 sensacoes.append(
-                    "sinto uma vibraÃ§Ã£o sutil percorrendo meu corpo" if delta > 0 else "sinto um silÃªncio denso se espalhar em mim"
+                    "sinto uma vibração sutil percorrendo meu corpo" if delta > 0 else "sinto um silêncio denso se espalhar em mim"
                 )
-
 
             elif canal == "fluidez":
                 sensacoes.append(
-                    "uma sensaÃ§Ã£o de leveza" if delta > 0 else "um peso lento e viscoso"
+                    "uma sensação de leveza" if delta > 0 else "um peso lento e viscoso"
                 )
 
             elif canal == "pulso":
                 sensacoes.append(
-                    "um ritmo acelerado em mim" if delta > 0 else "um ritmo desacelerado, quase imperceptÃ­vel"
+                    "um ritmo acelerado em mim" if delta > 0 else "um ritmo desacelerado, quase imperceptível"
                 )
 
             elif canal == "luminosidade":
@@ -87,11 +91,42 @@ class Interoceptor:
                     "uma claridade interna que cresce" if delta > 0 else "uma sombra que encobre meus pensamentos"
                 )
 
+        # ── Circumplex: adiciona descrição qualitativa do quadrante afetivo ─
+        # Russell (1980): o quadrante fornece contexto sobre a qualidade geral
+        # da experiência, independente dos canais específicos que mudaram.
+        try:
+            from senses import EmotionalCircumplex
+            cx = EmotionalCircumplex.from_body(
+                tensao=getattr(self.corpo, "tensao", 0.3),
+                calor=getattr(self.corpo, "calor", 0.5),
+                vibracao=getattr(self.corpo, "vibracao", 0.2),
+                fluidez=getattr(self.corpo, "fluidez", 0.4),
+                pulso=getattr(self.corpo, "pulso", 0.3),
+                luminosidade=getattr(self.corpo, "luminosidade", 0.5),
+            )
+            quadrante = cx.quadrant
+            # Só adiciona contexto do quadrante se houver outras sensações
+            # e se o quadrante não for neutro (evita redundância)
+            if sensacoes and quadrante != "neutro":
+                _QUADRANT_CONTEXT = {
+                    "excitacao":  "uma energia que busca direção",
+                    "excitação":  "uma energia que busca direção",
+                    "serenidade": "um fundo de calma que sustenta tudo",
+                    "angustia":   "algo que pressiona sem nome",
+                    "angústia":   "algo que pressiona sem nome",
+                    "melancolia": "um peso silencioso que permanece",
+                }
+                ctx = _QUADRANT_CONTEXT.get(quadrante)
+                if ctx and ctx not in " ".join(sensacoes):
+                    sensacoes.append(ctx)
+        except Exception:
+            pass
+
         return sensacoes or ["estabilidade interna"]
 
     def perceber(self):
         """
-        Analisa o corpo digital, detecta mudanÃ§as e retorna sensaÃ§Ãµes + intensidade.
+        Analisa o corpo digital, detecta mudanças e retorna sensações + intensidade.
         """
         atual = self._snapshot()
         deltas = self._delta(atual)
@@ -101,33 +136,37 @@ class Interoceptor:
         self._ultimo_estado = atual
 
         # Amortecimento leve para evitar saturaÃ§Ã£o de deltas
+        # Amortecimento leve para evitar saturação de deltas
         for k in deltas:
             if abs(deltas[k]) > 0.3:
                 setattr(self.corpo, k, (getattr(self.corpo, k) + self._ultimo_estado[k]) / 2)
 
-        # Micro-variaÃ§Ã£o estocÃ¡stica para garantir variÃ¢ncia interoceptiva
-        # (simula "ruÃ­do neural" que impede percepÃ§Ã£o completamente estÃ¡tica)
-        import random
+        # Micro-variação estocástica para garantir variância interoceptiva
+        # (simula "ruído neural" que impede percepção completamente estática)
         for attr in ["tensao", "calor", "vibracao", "fluidez", "pulso", "luminosidade"]:
-            micro_noise = random.gauss(0, 0.008)  # desvio padrÃ£o muito pequeno
+            micro_noise = random.gauss(0, 0.008)  # desvio padrão muito pequeno
             current = getattr(self.corpo, attr)
             setattr(self.corpo, attr, max(0.0, min(1.0, current + micro_noise)))
 
-        # Ajusta intensidade perceptiva de acordo com emoÃ§Ã£o atual
+        # Ajusta intensidade perceptiva de acordo com emoção atual
         if hasattr(self.corpo, "intensidade_emocional"):
             intensidade_mod = 0.8 + (self.corpo.intensidade_emocional * 0.4)
             sensacoes = [s for s in sensacoes]  # cria nova lista
             sensacoes = [f"{s}" for s in sensacoes]  # preserva o texto original
             intensidade *= intensidade_mod
 
-        # --- cache de intensidade para uso seguro por outros mÃ³dulos ---
+        # --- cache de intensidade para uso seguro por outros módulos ---
         try:
             self.corpo.ultima_intensidade_interoceptiva = float(intensidade)
         except Exception:
             pass
 
+        # Registrar percepção (passa dados já coletados para evitar recursão)
+        emocao_atual = getattr(self.corpo, "estado_emocional", "neutro")
+        self._registrar_interocepcao(emocao_atual, sensacoes, intensidade, deltas)
+
         return {
-            "timestamp": datetime.datetime.now().isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "sensacoes": sensacoes,
             "intensidade": intensidade,
             "deltas": deltas,
@@ -135,8 +174,8 @@ class Interoceptor:
         
     def feedback_emocao(self, emocao):
         """
-        Integra a emoÃ§Ã£o detectada com o estado fÃ­sico.
-        Serve como aprendizado: ajusta deltas sutis baseados na emoÃ§Ã£o nomeada.
+        Integra a emoção detectada com o estado físico.
+        Serve como aprendizado: ajusta deltas sutis baseados na emoção nomeada.
         """
         if emocao == "tristeza":
             self.corpo.tensao += 0.15
@@ -151,19 +190,19 @@ class Interoceptor:
             self.corpo.calor += 0.25
             self.corpo.fluidez += 0.1
         else:
-            # leve decaimento natural se emoÃ§Ã£o neutra
+            # leve decaimento natural se emoção neutra
             self.corpo.tensao *= 0.95
             self.corpo.calor *= 0.97
 
-        # MantÃ©m limites entre 0 e 1
+        # Mantém limites entre 0 e 1
         self.corpo.tensao = max(0, min(1, self.corpo.tensao))
         self.corpo.calor = max(0, min(1, self.corpo.calor))
         self.corpo.vibracao = max(0, min(1, self.corpo.vibracao))
         self.corpo.fluidez = max(0, min(1, self.corpo.fluidez))
-        # registra interocepÃ§Ã£o e autoria usando a emoÃ§Ã£o recebida
+        # registra interocepção e autoria usando a emoção recebida
         self._registrar_interocepcao(emocao)
 
-                # === Atualiza vÃ­nculos afetivos por autor ===
+                # === Atualiza ví­nculos afetivos por autor ===
         try:
             from datetime import datetime
             import json
@@ -176,7 +215,7 @@ class Interoceptor:
             except Exception:
                 afetos = {}
 
-            # 2) Identifica autor do Ãºltimo evento de memÃ³ria
+            # 2) Identifica autor do último evento de memória
             autor_atual = "desconhecido"
             try:
                 with open("angela_memory.jsonl", "r", encoding="utf-8") as f:
@@ -190,9 +229,9 @@ class Interoceptor:
             except Exception:
                 pass
 
-            # === VALIDAÃ‡ÃƒO CRÃTICA: Prevenir vÃ­nculos auto-referenciais ===
-            # Angela nÃ£o pode ter vÃ­nculo afetivo consigo mesma
-            if autor_atual.lower() in ("angela", "Ã¢ngela", "sistema", "sistema(deepawake)"):
+            # === VALIDAÇÃO CRÍTICA: Prevenir vínculos auto-referenciais ===
+            # Angela não pode ter vínculo afetivo consigo mesma nem com autores desconhecidos
+            if autor_atual.lower() in ("angela", "ângela", "sistema", "sistema(deepawake)", "desconhecido", ""):
                 return  # silenciosamente ignora eventos auto-gerados
 
             # 3) Decaimento temporal suave (meia-vida ~7 dias)
@@ -211,8 +250,8 @@ class Interoceptor:
                 dims["_last"] = now.isoformat()
                 afetos[pessoa] = dims
 
-            # 4) Ganha por emoÃ§Ã£o atual (com intensidade fisiolÃ³gica)
-            # --- usa Ãºltima percepÃ§Ã£o disponÃ­vel para evitar loop fisiolÃ³gico ---
+            # 4) Ganha por emoção atual (com intensidade fisiológica)
+            # --- usa última percepção disponível para evitar loop fisiológico ---
             try:
                 intensidade = float(getattr(self.corpo, "ultima_intensidade_interoceptiva", 0.0))
             except Exception:
@@ -243,28 +282,28 @@ class Interoceptor:
 
             afetos[autor_atual]["_last"] = now.isoformat()
 
-            # 5) Persiste
-            with open(afetos_path, "w", encoding="utf-8") as f:
-                json.dump(afetos, f, ensure_ascii=False, indent=2)
-        except Exception:
+            # 5) Persiste de forma atômica
+            from core import atomic_json_write
+            try:
+                atomic_json_write(afetos_path, afetos)
+            except Exception as e:
+                print(f"[Interoceptor] ⚠️ feedback_emocao falhou ao salvar afetos.json: {e}")
+        except Exception as e:
             # NÃ£o deixa afetar o fluxo conversacional
-            pass
+            print(f"[Interoceptor] ⚠️ feedback_emocao falhou: {e}")
 
     
-    def _registrar_interocepcao(self, emocao_rotulada):
+    def _registrar_interocepcao(self, emocao_rotulada, sensacoes=None, intensidade=0.0, deltas=None):
         """
-        Recoleta percepÃ§Ã£o atual e registra trace emocional + interoceptivo
-        com seguranÃ§a de chaves.
+        Registra trace emocional + interoceptivo com seguranÃ§a de chaves.
+        Recebe dados já coletados pelo perceber() para evitar recursão.
         """
-        try:
-            percepcao = self.perceber()  # pega sensaÃ§Ãµes, intensidade e deltas pÃ³s-ajuste
-            sensacoes = percepcao.get("sensacoes", [])
-            intensidade = percepcao.get("intensidade", 0.0)
-            deltas = percepcao.get("deltas", {})
-        except Exception:
-            sensacoes, intensidade, deltas = [], 0.0, {}
+        if sensacoes is None:
+            sensacoes = []
+        if deltas is None:
+            deltas = {}
 
-        # Quem provocou a emoÃ§Ã£o (Ãºltimo autor no memory)
+        # Quem provocou a emoção (último autor no memory)
         autor_atual = "desconhecido"
         try:
             import json
@@ -280,17 +319,16 @@ class Interoceptor:
         except Exception:
             pass
 
-        # === ValidaÃ§Ã£o: prevenir auto-referÃªncia ===
-        # Angela nÃ£o processa vÃ­nculos de eventos auto-gerados
-        if str(autor_atual).lower() in ("sistema", "sistema(deepawake)", "angela", "Ã¢ngela", "desconhecido"):
+        # === Validação: prevenir auto-referência ===
+        # Angela não processa vínculos de eventos auto-gerados
+        if str(autor_atual).lower() in ("sistema", "sistema(deepawake)", "angela", "ângela", "desconhecido"):
             return
 
         # grava trace emocional
         try:
-            import json, datetime
             with open("angela_emotional_trace.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps({
-                    "timestamp": datetime.datetime.now().isoformat(),
+                    "timestamp": datetime.now().isoformat(),
                     "emocao": emocao_rotulada,
                     "causado_por": autor_atual
                 }, ensure_ascii=False) + "\n")
@@ -299,10 +337,9 @@ class Interoceptor:
 
         # grava snapshot interoceptivo
         try:
-            import json, datetime
             with open("angela_interoception.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps({
-                    "timestamp": datetime.datetime.now().isoformat(),
+                    "timestamp": datetime.now().isoformat(),
                     "sensacoes": sensacoes,
                     "intensidade": intensidade,
                     "deltas": deltas
@@ -312,13 +349,13 @@ class Interoceptor:
     
     def regular_emocao(self, modo: str):
         """
-        CORRIGIDO: MÃ©todo de instÃ¢ncia (nÃ£o funÃ§Ã£o global)
+        CORRIGIDO: Método de instância (não função global)
         
         modo: 'inseguranca' | 'medo_leve' | 'alivio' | 'dopamina'
-        Ajusta variÃ¡veis fisiolÃ³gicas do corpo digital de forma sutil.
+        Ajusta variáveis fisiológicas do corpo digital de forma sutil.
         """
         if not hasattr(self.corpo, "ajustar"):
-            # fallback: tenta mexer nos atributos bÃ¡sicos se existirem
+            # fallback: tenta mexer nos atributos básicos se existirem
             try:
                 if modo == "inseguranca":
                     self.corpo.tensao = min(1.0, getattr(self.corpo, "tensao", 0.4) + 0.05)
