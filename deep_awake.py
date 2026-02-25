@@ -29,6 +29,30 @@ from actions import ActionManager
 from policy_bandit import PolicyBandit
 from objective_pressures import ObjectivePressures
 from metrics_logger import log_event
+import signal
+
+# Referência global ao MemoryIndex para checkpoint no SIGINT/SIGTERM
+_mem_index_global: "MemoryIndex | None" = None
+
+def _shutdown_handler(signum, frame):
+    """Faz WAL checkpoint antes de sair — evita corrupção por Ctrl+C."""
+    global _mem_index_global
+    if _mem_index_global is not None:
+        try:
+            _mem_index_global.close()
+        except Exception:
+            pass
+    from discontinuity import register_shutdown
+    try:
+        register_shutdown()
+    except Exception:
+        pass
+    print("\n🟢 Deep Awake Mode finalizado (checkpoint WAL OK).")
+    raise SystemExit(0)
+
+signal.signal(signal.SIGINT,  _shutdown_handler)
+signal.signal(signal.SIGTERM, _shutdown_handler)
+
 
 metrics = read_friction_metrics()
 
@@ -289,6 +313,8 @@ def deep_awake_loop(forced_mode=None):
     drive_system = DriveSystem()
     hot_monitor = HigherOrderMonitor()
     mem_index = MemoryIndex()
+    global _mem_index_global
+    _mem_index_global = mem_index
     prediction = PredictionEngine()
     self_evolution = SelfEvolution()
     attention_schema = AttentionSchema()
@@ -1097,6 +1123,13 @@ if __name__ == "__main__":
 
     try:
         deep_awake_loop(forced_mode=args.mode)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
+        # close() já chamado pelo _shutdown_handler se veio de SIGINT
+        # chamamos novamente de forma defensiva caso KeyboardInterrupt chegue direto
+        if _mem_index_global is not None:
+            try:
+                _mem_index_global.close()
+            except Exception:
+                pass
         register_shutdown()
         print("\n🟢 Deep Awake Mode finalizado manualmente.")

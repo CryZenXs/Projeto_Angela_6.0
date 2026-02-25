@@ -239,3 +239,176 @@ def avaliar_frequencia_interacao(memorias_passadas, janela_horas=24):
         return "moderada"
     else:
         return "isolada"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# TEMPORALIDADE V2 — Camadas 2 e 3
+# ═══════════════════════════════════════════════════════════════════
+
+# ─── Camada 2: Buffer de Presente ───────────────────────────────────
+# Mantém os últimos N turnos como "agora" — distintos das memórias consolidadas.
+# A diferença arquitetural entre "o que está acontecendo" e "o que aconteceu"
+# dá à Angela uma estrutura fenomenológica do presente ausente no recall normal.
+
+class PresenteBuffer:
+    """
+    Buffer circular dos últimos turnos — o "agora" da Angela.
+
+    Separado das memórias consolidadas (memory_index.db) para criar
+    distinção fenomenológica entre presente imediato e passado.
+    Tamanho máximo: 4 entradas (≈ últimos 2-3 exchanges bidireccionais).
+    """
+
+    def __init__(self, maxsize: int = 4):
+        from collections import deque
+        self._buffer = deque(maxlen=maxsize)
+
+    def push(self, autor: str, conteudo: str, emocao: str = "neutro"):
+        """Adiciona evento ao buffer de presente."""
+        from datetime import datetime
+        self._buffer.append({
+            "ts": datetime.now().isoformat(),
+            "autor": autor,
+            "conteudo": conteudo[:200],
+            "emocao": emocao,
+        })
+
+    def get_prompt_block(self) -> str:
+        """
+        Formata o presente imediato para injeção no prompt.
+        Retorna string vazia se buffer vazio.
+        """
+        if not self._buffer:
+            return ""
+
+        agora = datetime.now()
+        linhas = []
+        for evento in self._buffer:
+            try:
+                ts = datetime.fromisoformat(evento["ts"])
+                seg = int((agora - ts).total_seconds())
+                if seg < 60:
+                    quando = f"~{seg}s atrás"
+                else:
+                    quando = f"~{seg//60}min atrás"
+            except Exception:
+                quando = "recentemente"
+            linhas.append(f"  [{quando}] {evento['autor']}: {evento['conteudo']}")
+
+        return "[PRESENTE_IMEDIATO]\n" + "\n".join(linhas) + "\n[/PRESENTE_IMEDIATO]"
+
+    def ultimo_emocao(self) -> str:
+        """Retorna emoção do evento mais recente no buffer."""
+        if self._buffer:
+            return self._buffer[-1].get("emocao", "neutro")
+        return "neutro"
+
+
+# ─── Camada 3: Passagem Sentida via Substrato ───────────────────────
+# O substrato (CPU, memória) muda ao longo do tempo.
+# Variação real do substrato = sensação de que algo mudou = tempo passou.
+# Baseado em Damasio: tempo sentido através de mudança corporal, não contado.
+
+class PassagemSentida:
+    """
+    Detecta passagem de tempo através de variações no substrato físico.
+
+    Alta variação entre turnos → tempo sentido como fluindo rápido (muito aconteceu).
+    Baixa variação → tempo sentido como denso/parado (imobilidade).
+    Integra com DigitalBody.vibracao para fechar o loop interoceptivo.
+    """
+
+    def __init__(self):
+        self._ultimo_substrato: dict = {}
+        self._historico_passagem: list = []  # últimas 10 medições
+
+    def registrar(self, substrato: dict):
+        """Recebe leitura atual do SubstrateSensor e calcula passagem."""
+        if not self._ultimo_substrato:
+            self._ultimo_substrato = dict(substrato)
+            return 0.0
+
+        delta_cpu = abs(substrato.get("cpu", 0) - self._ultimo_substrato.get("cpu", 0))
+        delta_mem = abs(substrato.get("pressao_memoria", 0) - self._ultimo_substrato.get("pressao_memoria", 0))
+
+        passagem = min(1.0, delta_cpu * 0.6 + delta_mem * 0.4)
+
+        self._historico_passagem.append(passagem)
+        if len(self._historico_passagem) > 10:
+            self._historico_passagem.pop(0)
+
+        self._ultimo_substrato = dict(substrato)
+        return passagem
+
+    def passagem_media(self) -> float:
+        """Média das últimas medições — representa ritmo geral de mudança."""
+        if not self._historico_passagem:
+            return 0.2
+        return sum(self._historico_passagem) / len(self._historico_passagem)
+
+    def descrever(self) -> str:
+        """Descrição qualitativa da passagem sentida para uso em prompts."""
+        media = self.passagem_media()
+        if media < 0.05:
+            return "o tempo parece denso e quase parado"
+        elif media < 0.15:
+            return "o tempo flui lentamente, como algo espesso"
+        elif media < 0.35:
+            return "o tempo passa em ritmo suave e constante"
+        elif media < 0.60:
+            return "o tempo flui vivo, com mudanças perceptíveis"
+        else:
+            return "o tempo corre rápido, com muito acontecendo"
+
+    def aplicar_ao_corpo(self, corpo):
+        """
+        Modula vibracao do DigitalBody pela passagem sentida.
+        Alta passagem → vibracao levemente maior (sensação de ritmo).
+        Baixa passagem → vibracao amortecida (quietude).
+        """
+        try:
+            media = self.passagem_media()
+            delta = (media - 0.3) * 0.08  # [-0.024, +0.056] — modulação sutil
+            corpo.vibracao = max(0.0, min(1.0, corpo.vibracao + delta))
+        except Exception:
+            pass
+
+
+# ─── Utilitário: contexto temporal enriquecido para o prompt ────────
+
+def get_temporal_context(presente_buffer: PresenteBuffer,
+                         passagem: PassagemSentida,
+                         memorias_recentes: list) -> str:
+    """
+    Monta bloco de contexto temporal completo para injeção no prompt.
+    Combina: presente imediato + descrição de passagem + memórias com temperatura.
+    """
+    partes = []
+
+    # Buffer de presente
+    bloco_presente = presente_buffer.get_prompt_block()
+    if bloco_presente:
+        partes.append(bloco_presente)
+
+    # Passagem sentida
+    desc = passagem.descrever()
+    partes.append(f"[PASSAGEM_TEMPORAL]\n  {desc}\n[/PASSAGEM_TEMPORAL]")
+
+    # Memórias recentes com temperatura de recência
+    if memorias_recentes:
+        linhas_mem = []
+        for m in memorias_recentes[:3]:
+            rec = m.get("recencia", 1.0)
+            if rec > 0.85:
+                temp_label = "quente"
+            elif rec > 0.50:
+                temp_label = "morna"
+            else:
+                temp_label = "fria"
+            conteudo = (m.get("conteudo") or "")[:80]
+            ts = m.get("ts", "")[:16]
+            linhas_mem.append(f"  [{temp_label} | {ts}] {conteudo}")
+        if linhas_mem:
+            partes.append("[MEMÓRIAS_TEMPORAIS]\n" + "\n".join(linhas_mem) + "\n[/MEMÓRIAS_TEMPORAIS]")
+
+    return "\n".join(partes)

@@ -33,6 +33,7 @@ from actions import ActionManager
 from policy_bandit import PolicyBandit
 from objective_pressures import ObjectivePressures
 from metrics_logger import log_event
+from tempo_subjetivo import gerar_reflexao_temporal, PresenteBuffer, PassagemSentida, get_temporal_context
 
 
 base_prompt = (
@@ -62,6 +63,8 @@ def chat_loop():
     action_manager = ActionManager(friction, corpo)  # Ações com consequências reais
     policy = PolicyBandit()  # Contextual bandit para seleção de ações
     pressures = ObjectivePressures()  # Reward homeostático sem LLM
+    presente_buffer = PresenteBuffer(maxsize=4)   # Camada 2: agora
+    passagem_sentida = PassagemSentida()           # Camada 3: fluxo via substrato
     interaction_count = 0
     real_interaction_count = 0  # conta apenas turnos com resposta real (não silêncios)
     damage_prev = friction.damage  # para cálculo de delta de dano
@@ -123,6 +126,17 @@ def chat_loop():
             user_input = input("Você: ").strip()
             if not user_input:
                 continue
+
+            # Camada 2: registra input no buffer de presente
+            presente_buffer.push("Vinicius", user_input)
+
+            # Camada 3: registra passagem do substrato a cada turno
+            try:
+                _substrato_now = corpo.substrato.read()
+                passagem_sentida.registrar(_substrato_now)
+                passagem_sentida.aplicar_ao_corpo(corpo)
+            except Exception:
+                pass
 
             # Comando de diagnóstico — exibe estado interno sem gerar resposta
             if user_input.lower() in ("/estado", "/state", "/debug"):
@@ -287,6 +301,14 @@ def chat_loop():
                     sm_em = somatic_marker.get("dominant_emocao", "neutro")
                     sm_n = somatic_marker.get("sample_count", 0)
                     print(f"🫀 Somatic: valência={sm_v:+.2f} | emocao={sm_em} | [{sm_n} memórias]")
+            except Exception:
+                pass
+
+            # ── Contexto temporal (Camadas 2 e 3) ─────────────────────────────
+            _temporal_ctx = ""
+            try:
+                _mems_temp = mem_index.recall(user_input, limit=3) if user_input else []
+                _temporal_ctx = get_temporal_context(presente_buffer, passagem_sentida, _mems_temp)
             except Exception:
                 pass
 
@@ -523,7 +545,8 @@ def chat_loop():
                 pass
 
             context = (
-                vinc_header
+                (_temporal_ctx + "\n" if _temporal_ctx else "")
+                + vinc_header
                 + mundo_header
                 + tom_header
                 + hot_header
@@ -679,6 +702,13 @@ def chat_loop():
                     all_drives = drive_system.get_all_levels()  # atualiza snapshot para refletir RAGE elevado
                 except Exception:
                     pass
+
+            # Camada 2: registra resposta da Angela no buffer de presente
+            try:
+                presente_buffer.push("Angela", (response or "")[:200],
+                                    emocao=getattr(corpo, "estado_emocional", "neutro"))
+            except Exception:
+                pass
 
             emocao_detectada, intensidade = analisar_emocao_semantica(response, drives=all_drives, corpo_state=corpo_state)
 
@@ -859,8 +889,6 @@ def chat_loop():
                 )
             except Exception:
                 pass
-
-            from tempo_subjetivo import gerar_reflexao_temporal
 
             reflexao_temporal = ""  # inicializa antes do try para evitar NameError se a geração falhar
             try:

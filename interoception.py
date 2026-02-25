@@ -161,9 +161,12 @@ class Interoceptor:
         except Exception:
             pass
 
-        # Registrar percepção (passa dados já coletados para evitar recursão)
+        # Registrar percepção (passa dados já coletados para evitar recursão).
+        # Bug J fix: passa autor_hint para evitar leitura do arquivo quando possível.
+        # Como perceber() não sabe o autor sem ler o arquivo, usa None — a validação
+        # interna descartará rapidamente se for evento de sistema.
         emocao_atual = getattr(self.corpo, "estado_emocional", "neutro")
-        self._registrar_interocepcao(emocao_atual, sensacoes, intensidade, deltas)
+        self._registrar_interocepcao(emocao_atual, sensacoes, intensidade, deltas, autor_hint=None)
 
         return {
             "timestamp": datetime.now().isoformat(),
@@ -177,6 +180,10 @@ class Interoceptor:
         Integra a emoção detectada com o estado físico.
         Serve como aprendizado: ajusta deltas sutis baseados na emoção nomeada.
         """
+        # Bug I fix: determina autor_atual UMA VEZ aqui e reutiliza em
+        # _registrar_interocepcao e na atualização de afetos — sem dupla leitura.
+        autor_atual = self._resolver_autor()
+
         if emocao == "tristeza":
             self.corpo.tensao += 0.15
             self.corpo.calor -= 0.1
@@ -199,10 +206,10 @@ class Interoceptor:
         self.corpo.calor = max(0, min(1, self.corpo.calor))
         self.corpo.vibracao = max(0, min(1, self.corpo.vibracao))
         self.corpo.fluidez = max(0, min(1, self.corpo.fluidez))
-        # registra interocepção e autoria usando a emoção recebida
-        self._registrar_interocepcao(emocao)
+        # Registra interocepção passando autor já resolvido (sem segunda leitura do arquivo)
+        self._registrar_interocepcao(emocao, autor_hint=autor_atual)
 
-                # === Atualiza ví­nculos afetivos por autor ===
+        # === Atualiza vínculos afetivos por autor ===
         try:
             from datetime import datetime
             import json
@@ -215,19 +222,7 @@ class Interoceptor:
             except Exception:
                 afetos = {}
 
-            # 2) Identifica autor do último evento de memória
-            autor_atual = "desconhecido"
-            try:
-                with open("angela_memory.jsonl", "r", encoding="utf-8") as f:
-                    linhas = [json.loads(l) for l in f if l.strip()]
-                if linhas:
-                    ult = linhas[-1]
-                    if isinstance(ult.get("user"), dict):
-                        autor_atual = ult["user"].get("autor", "desconhecido")
-                    else:
-                        autor_atual = "Vinicius"
-            except Exception:
-                pass
+            # 2) autor_atual já foi determinado no início do método — reutiliza
 
             # === VALIDAÇÃO CRÍTICA: Prevenir vínculos auto-referenciais ===
             # Angela não pode ter vínculo afetivo consigo mesma nem com autores desconhecidos
@@ -264,15 +259,15 @@ class Interoceptor:
 
             ganho = max(0.0, min(1.0, intensidade))  # 0..1
             # Mapeamento simples emoÃ§Ã£oâ†’dimensÃµes
-            if emocao in ("alegria", "serenidade", "amor", "gratidÃ£o"):
+            if emocao in ("alegria", "serenidade", "amor", "gratidão"):
                 afetos[autor_atual]["confianca"] += 0.7 * ganho
                 afetos[autor_atual]["gratidao"]  += 0.5 * ganho
-            elif emocao in ("medo", "ansiedade", "inseguranÃ§a"):
+            elif emocao in ("medo", "ansiedade", "insegurança"):
                 afetos[autor_atual]["ansiedade"] += 0.6 * ganho
                 afetos[autor_atual]["confianca"] -= 0.3 * ganho
             elif emocao in ("tristeza", "saudade"):
                 afetos[autor_atual]["saudade"]   += 0.5 * ganho
-            elif emocao in ("raiva", "irritacao", "irritaÃ§Ã£o"):
+            elif emocao in ("raiva", "irritacao", "irritação"):
                 afetos[autor_atual]["ansiedade"] += 0.4 * ganho
                 afetos[autor_atual]["confianca"] -= 0.4 * ganho
 
@@ -293,34 +288,52 @@ class Interoceptor:
             print(f"[Interoceptor] ⚠️ feedback_emocao falhou: {e}")
 
     
-    def _registrar_interocepcao(self, emocao_rotulada, sensacoes=None, intensidade=0.0, deltas=None):
+    @staticmethod
+    def _resolver_autor() -> str:
         """
-        Registra trace emocional + interoceptivo com seguranÃ§a de chaves.
-        Recebe dados já coletados pelo perceber() para evitar recursão.
+        Lê o último autor do angela_memory.jsonl.
+        Centralizado aqui para evitar duplicação — chamado NO MÁXIMO uma vez
+        por ciclo perceber()/feedback_emocao().
         """
-        if sensacoes is None:
-            sensacoes = []
-        if deltas is None:
-            deltas = {}
-
-        # Quem provocou a emoção (último autor no memory)
-        autor_atual = "desconhecido"
         try:
             import json
             with open("angela_memory.jsonl", "r", encoding="utf-8") as f:
                 linhas = [json.loads(l) for l in f if l.strip()]
             if linhas:
                 ult = linhas[-1]
-                # aceita o formato novo (dict) ou o antigo (string)
                 if isinstance(ult.get("user"), dict):
-                    autor_atual = ult["user"].get("autor", "desconhecido")
-                else:
-                    autor_atual = "Vinicius"
+                    return ult["user"].get("autor", "desconhecido")
+                return "Vinicius"
         except Exception:
             pass
+        return "desconhecido"
+
+    _AUTORES_SISTEMA = frozenset(
+        ("sistema", "sistema(deepawake)", "angela", "\xe2\x80\x8c\xc3\xa2ngela", "desconhecido")
+    )
+
+    def _registrar_interocepcao(self, emocao_rotulada, sensacoes=None, intensidade=0.0,
+                                deltas=None, autor_hint: str = None):
+        """
+        Registra trace emocional + interoceptivo.
+        Recebe dados já coletados pelo perceber() para evitar recursão.
+
+        autor_hint: se fornecido, usa diretamente sem reler o arquivo
+                    (Bugs I+J fix: evita dupla leitura em feedback_emocao e
+                     leitura desnecessária em perceber() quando emitido por sistema).
+        """
+        if sensacoes is None:
+            sensacoes = []
+        if deltas is None:
+            deltas = {}
+
+        # Resolve autor — usa hint se disponível, lê arquivo apenas se necessário
+        if autor_hint is not None:
+            autor_atual = autor_hint
+        else:
+            autor_atual = self._resolver_autor()
 
         # === Validação: prevenir auto-referência ===
-        # Angela não processa vínculos de eventos auto-gerados
         if str(autor_atual).lower() in ("sistema", "sistema(deepawake)", "angela", "ângela", "desconhecido"):
             return
 

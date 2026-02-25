@@ -118,12 +118,94 @@ class MemoryIndex:
                 os.path.dirname(os.path.abspath(__file__)), "memory_index.db"
             )
         self._db_path = db_path
-        self._conn = sqlite3.connect(db_path)
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn = self._open_connection(db_path)
         self._embedder = EmbeddingProvider(model=embed_model)
         self._create_tables()
         self._migrate_db()
+
+    @staticmethod
+    def _open_connection(db_path: str) -> sqlite3.Connection:
+        """
+        Abre conexão SQLite com recuperação automática de WAL corrompido.
+
+        Quando Ctrl+C mata deep_awake.py no meio de uma escrita WAL, os arquivos
+        .db-wal e .db-shm ficam em estado inconsistente — qualquer tentativa de
+        abrir o banco retorna 'disk I/O error'. A solução é deletar esses dois
+        arquivos auxiliares (o banco principal fica intacto) e reabrir.
+
+        Se mesmo assim falhar, tenta modo de recuperação (uri=True + immutable)
+        para exportar o que for possível antes de recriar o arquivo.
+        """
+        def _connect(path):
+            conn = sqlite3.connect(path)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=NORMAL")   # WAL + NORMAL = seguro e rápido
+            conn.execute("PRAGMA foreign_keys=ON")
+            return conn
+
+        # Tentativa normal
+        try:
+            return _connect(db_path)
+        except sqlite3.OperationalError as e:
+            if "disk I/O error" not in str(e) and "unable to open" not in str(e):
+                raise
+
+        # Recuperação: deleta WAL/SHM (arquivos auxiliares, não o banco principal)
+        print("⚠️ [MemoryIndex] WAL corrompido detectado — tentando recuperação automática...")
+        for suffix in (".db-wal", ".db-shm"):
+            aux = db_path + suffix
+            if os.path.exists(aux):
+                try:
+                    os.remove(aux)
+                    print(f"   🗑️  {os.path.basename(aux)} removido")
+                except OSError as rm_err:
+                    print(f"   ⚠️  Não foi possível remover {aux}: {rm_err}")
+
+        try:
+            conn = _connect(db_path)
+            print("   ✅ Banco recuperado com sucesso após remoção dos arquivos WAL.")
+            return conn
+        except sqlite3.OperationalError:
+            pass
+
+        # Último recurso: banco não recuperável — recria do zero
+        # (bulk_index_from_jsonl reconstruirá as memórias no próximo boot)
+        backup_path = db_path + ".corrupted"
+        print(f"   ❌ Banco irrecuperável — renomeando para {os.path.basename(backup_path)} e recriando.")
+        try:
+            if os.path.exists(backup_path):
+                os.remove(backup_path)
+            os.rename(db_path, backup_path)
+        except OSError:
+            try:
+                os.remove(db_path)
+            except OSError:
+                pass
+
+        conn = _connect(db_path)
+        print("   ✅ Novo banco criado. Memórias serão reconstruídas via bulk_index_from_jsonl.")
+        return conn
+
+    def close(self):
+        """
+        Fecha a conexão de forma segura, fazendo checkpoint do WAL antes.
+
+        Deve ser chamado explicitamente no shutdown (SIGINT/SIGTERM) para garantir
+        que todas as escritas WAL sejam consolidadas no arquivo principal.
+        Sem isso, o próximo boot pode encontrar WAL em estado incompleto.
+        """
+        try:
+            # TRUNCATE: checkpoint + zera o WAL file (tamanho 0)
+            # Garante que o próximo boot não precise processar WAL residual
+            self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            self._conn.commit()
+        except Exception:
+            pass
+        try:
+            self._conn.close()
+        except Exception:
+            pass
 
     def _create_tables(self):
         cur = self._conn.cursor()
@@ -247,6 +329,17 @@ class MemoryIndex:
     def _row_to_dict(self, row, relevance_score=0.0):
         tags_raw = row["tags"] or ""
         tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
+
+        # Calcula recência para uso externo (tempo_subjetivo, prompt)
+        recencia = 1.0
+        try:
+            ts_str = row["ts"] or ""
+            if ts_str:
+                horas = (datetime.now() - datetime.fromisoformat(ts_str[:19])).total_seconds() / 3600.0
+                recencia = round(math.exp(-horas / 34.7), 4)
+        except Exception:
+            pass
+
         return {
             "ts": row["ts"],
             "autor": row["autor"],
@@ -257,6 +350,7 @@ class MemoryIndex:
             "intensidade": row["intensidade"],
             "tags": tags_list,
             "relevance_score": round(relevance_score, 4),
+            "recencia": recencia,   # 1.0=agora, 0.5=24h, 0.13=72h
         }
 
     @staticmethod
@@ -459,6 +553,24 @@ class MemoryIndex:
             # Intensity boost
             intensity_val = row["intensidade"] if row["intensidade"] else 0.0
             blended += intensity_val * 0.1
+
+            # ── Recência temporal (Camada 1 de temporalidade) ──────────────
+            # Temperatura exponencial: memórias recentes "esquentam" o score.
+            # Meia-vida de 24h — igual ao modelo de Damasio de marcadores somáticos
+            # que decaem com o tempo mas nunca somem completamente.
+            #   1h atrás  → recencia=0.97  (quente, presente imediato)
+            #   6h atrás  → recencia=0.83  (morna, sessão recente)
+            #   24h atrás → recencia=0.50  (neutra, ontem)
+            #   72h atrás → recencia=0.13  (fria, passado distante)
+            try:
+                ts_str = row["ts"] or ""
+                if ts_str:
+                    ts_dt = datetime.fromisoformat(ts_str[:19])
+                    horas = (datetime.now() - ts_dt).total_seconds() / 3600.0
+                    recencia = math.exp(-horas / 34.7)  # meia-vida=24h: ln2/24≈0.0289 → 1/0.0289≈34.7
+                    blended += recencia * 0.12  # peso: recência vale até 0.12 pontos
+            except Exception:
+                pass
 
             combined.append((row, blended))
 
