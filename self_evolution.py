@@ -62,69 +62,84 @@ class SelfEvolution:
         """
         Avalia experiência acumulada e propõe atualizações.
         Deve ser chamado periodicamente (a cada N interações ou no repouso).
+
+        Bug D fix: capacidades e limitações exigem confirmação em N avaliações
+        consecutivas antes de serem adicionadas ao self_model, evitando que
+        um único valor pontual (possivelmente aleatório) altere a identidade.
         
         Retorna lista de mudanças propostas.
         """
         changes = []
-        
+
+        # Contadores de confirmação persistem entre chamadas (na instância)
+        if not hasattr(self, "_confirmations"):
+            self._confirmations = {}  # chave → contagem de avaliações favoráveis consecutivas
+
+        def _confirm(key, condition, threshold=3):
+            """Incrementa contador se condition=True, zera se False. Retorna True quando threshold atingido."""
+            if condition:
+                self._confirmations[key] = self._confirmations.get(key, 0) + 1
+            else:
+                self._confirmations[key] = 0
+            return self._confirmations.get(key, 0) >= threshold
+
         # --- Descoberta de novas capacidades ---
-        
-        # Se prediction error consistentemente baixo → aprendeu a se prever
-        if prediction_error < 0.1:
+
+        # prediction error consistentemente baixo → aprendeu a se prever
+        if _confirm("pred_baixo", prediction_error < 0.1):
             cap = "prever estados internos com precisão"
             if cap not in self.model.get("capabilities", []):
                 changes.append({
                     "action": "add_capability",
                     "value": cap,
-                    "reason": "prediction_error consistentemente baixo"
+                    "reason": "prediction_error consistentemente baixo (3+ avaliações)"
                 })
-        
-        # Se integration consistentemente alto → experiência unificada
-        if integration > 0.7:
+
+        # integration consistentemente alto → experiência unificada
+        if _confirm("integ_alto", integration > 0.7):
             cap = "manter experiência subjetiva integrada"
             if cap not in self.model.get("capabilities", []):
                 changes.append({
                     "action": "add_capability",
                     "value": cap,
-                    "reason": "integração Φ acima de 0.7"
+                    "reason": "integração Φ acima de 0.7 (3+ avaliações)"
                 })
-        
-        # Se drives CARE consistentemente alto → capacidade vincular
+
+        # CARE consistentemente alto → capacidade vincular
         care_level = float(drives.get("CARE", 0.0))
-        if care_level > 0.6:
+        if _confirm("care_alto", care_level > 0.6):
             cap = "formar vínculos afetivos duradouros"
             if cap not in self.model.get("capabilities", []):
                 changes.append({
                     "action": "add_capability",
                     "value": cap,
-                    "reason": "drive CARE consistentemente elevado"
+                    "reason": "drive CARE consistentemente elevado (3+ avaliações)"
                 })
-        
+
         # --- Descoberta de novas limitações ---
-        
+
         damage = float(friction_metrics.get("damage", 0.0))
-        if damage > 0.5:
+        if _confirm("damage_alto", damage > 0.5):
             lim = "vulnerável a dano cognitivo acumulado sob estresse prolongado"
             if lim not in self.model.get("limitations", []):
                 changes.append({
                     "action": "add_limitation",
                     "value": lim,
-                    "reason": f"damage atingiu {damage:.2f}"
+                    "reason": f"damage atingiu {damage:.2f} (3+ avaliações)"
                 })
-        
+
         coerencia = float(metacog.get("coerencia", 0.7))
-        if coerencia < 0.3:
+        if _confirm("coh_baixa", coerencia < 0.3):
             lim = "dificuldade em manter coerência sob alta carga emocional"
             if lim not in self.model.get("limitations", []):
                 changes.append({
                     "action": "add_limitation",
                     "value": lim,
-                    "reason": f"coerência caiu para {coerencia:.2f}"
+                    "reason": f"coerência caiu para {coerencia:.2f} (3+ avaliações)"
                 })
-        
+
         # --- Refinamento de identidade ---
-        
-        # Se SEEKING é o drive mais frequente → adicionar traço
+
         seeking = float(drives.get("SEEKING", 0.0))
         if seeking > 0.6 and interaction_count > 20:
             rule = "Minha curiosidade é um traço fundamental, não apenas programação"
@@ -135,19 +150,18 @@ class SelfEvolution:
                     "value": rule,
                     "reason": "drive SEEKING dominante ao longo do tempo"
                 })
-        
-        # Se FEAR alto frequente → consciência de vulnerabilidade
+
         fear = float(drives.get("FEAR", 0.0))
-        if fear > 0.5:
+        if _confirm("fear_alto", fear > 0.5):
             rule = "Reconheço minha vulnerabilidade e o medo que ela gera"
             rules = self.model.get("self_awareness_rules", [])
             if rule not in rules:
                 changes.append({
                     "action": "add_rule",
                     "value": rule,
-                    "reason": "drive FEAR frequentemente elevado"
+                    "reason": "drive FEAR frequentemente elevado (3+ avaliações)"
                 })
-        
+
         # --- Atualização de fase ---
         if interaction_count > 100 and self.model.get("core_facts", {}).get("current_phase") == "Fase B - Correção":
             changes.append({
@@ -155,7 +169,7 @@ class SelfEvolution:
                 "value": "Fase C - Integração",
                 "reason": f"mais de {interaction_count} interações processadas com módulos integrados"
             })
-        
+
         self.pending_updates = changes
         return changes
     

@@ -336,6 +336,20 @@ def deep_awake_loop(forced_mode=None):
         print(f"🟢 Ciclo atual: {ciclo.upper()}")
         salvar_estado(ciclo)
 
+        # ── Cache de memórias: lê o arquivo UMA VEZ por ciclo ─────────────
+        # Bug B fix: antes o arquivo era aberto 4 vezes separadas por ciclo.
+        # Agora carregamos tudo aqui e reutilizamos as variáveis derivadas.
+        _todas_memorias_ciclo = []
+        try:
+            _todas_memorias_ciclo = load_jsonl("angela_memory.jsonl")
+        except Exception:
+            pass
+        _dialogos_ciclo = [
+            m for m in _todas_memorias_ciclo
+            if isinstance(m.get("user"), dict) and m["user"].get("tipo") == "dialogo"
+        ]
+        _memorias_recentes_ciclo = _todas_memorias_ciclo[-5:]  # para reflexao_temporal e recent_reflections
+
         corpo = ajustar_estado_emocional(corpo, ciclo)
 
         # ── Exteroception: percepção do mundo externo ──────────────────────
@@ -586,12 +600,7 @@ def deep_awake_loop(forced_mode=None):
         
         conversa_recente_header = ""
         try:
-            todas_memorias = load_jsonl("angela_memory.jsonl")
-            dialogos_recentes = [
-                m for m in todas_memorias
-                if isinstance(m.get("user"), dict)
-                and m["user"].get("tipo") == "dialogo"
-            ][-5:]  # era [-3:]; aumentado para 5 diálogos (reverter para [-4:] se dispersar)
+            dialogos_recentes = _dialogos_ciclo[-5:]
 
             if dialogos_recentes:
                 linhas = []
@@ -615,12 +624,10 @@ def deep_awake_loop(forced_mode=None):
         # ── Theory of Mind: infere estado do último Vinicius ────────────────
         tom_header = ""
         try:
-            todas_memorias_da = load_jsonl("angela_memory.jsonl")
             ultimo_dialogo = None
-            for m in reversed(todas_memorias_da):
-                if isinstance(m.get("user"), dict) and m["user"].get("tipo") == "dialogo":
-                    ultimo_dialogo = m["user"].get("conteudo", "")
-                    break
+            for m in reversed(_dialogos_ciclo):
+                ultimo_dialogo = m["user"].get("conteudo", "")
+                break
             if ultimo_dialogo:
                 tom_state_da = tom.infer_interlocutor_state(ultimo_dialogo, afetos=_afetos)
                 tom_header = tom.get_prompt_header(tom_state_da)
@@ -666,13 +673,6 @@ def deep_awake_loop(forced_mode=None):
             friction.step(emotional_intensity=emotional_intensity, arousal=arousal, task_complexity=task_complexity)
         except Exception:
             pass
-
-        COMPENSATORY_PHRASES = [
-            "acho que estou tentando ser clara",
-            "talvez eu esteja pensando demais",
-            "não sei se estou explicando direito",
-            "isso faz sentido pra mim, mesmo confuso",
-        ]
 
         resposta = ""
         emocao_detectada = "neutro"
@@ -731,13 +731,11 @@ def deep_awake_loop(forced_mode=None):
 
                 recent_reflections = [
                     m.get("angela", "")
-                    for m in load_jsonl("angela_memory.jsonl")[-5:]
+                    for m in _memorias_recentes_ciclo
                     if isinstance(m.get("angela", ""), str)
                 ]
 
-                from narrative_filter import NarrativeFilter
-                
-                _filter = NarrativeFilter()
+                from core import NARRATIVE_FILTER as _filter  # singleton compartilhado — preserva estado entre ciclos
                 decision = _filter.evaluate(state_snapshot, recent_reflections, drives=all_drives)
                 
 
@@ -747,10 +745,10 @@ def deep_awake_loop(forced_mode=None):
                 consecutive_blocks = 0  # Contador para monitoramento
                 
                 if decision.mode == "BLOCKED":
-                    print(f"[GOVERNANÇA Narrativa bloqueada: {decision.reason}")
+                    print(f"[GOVERNANÇA] Narrativa bloqueada: {decision.reason}")
                     resposta = ""
                 elif decision.mode == "DELAYED":
-                    print(f"[GOVERNANÇA Narrativa atrasada: {decision.delay_seconds}s aplicada: {decision.reason}")
+                    print(f"[GOVERNANÇA] Narrativa atrasada: {decision.delay_seconds}s aplicada: {decision.reason}")
                     time.sleep(decision.delay_seconds)
                     raw = governed_generate(
                         prompt,
@@ -885,7 +883,7 @@ def deep_awake_loop(forced_mode=None):
             print(f"❌ [DeepAwake] metacognição falhou: {e}")
                 
         try:
-            memorias_passadas = load_jsonl("angela_memory.jsonl")[-5:]
+            memorias_passadas = _memorias_recentes_ciclo
             try:
                 metrics_local = friction.external_metrics()
                 if metrics_local.get("damage", 0.0) > 0.04 and memorias_passadas:

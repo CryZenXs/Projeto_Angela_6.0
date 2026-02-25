@@ -103,24 +103,45 @@ class CognitiveFriction:
             self.chronic = False
 
     def _save_persistent_state(self):
-        """Salva damage e load no arquivo persistente"""
+        """Salva damage e load no arquivo persistente.
+
+        Bug E fix: em vez de sobrescrever o arquivo com os valores em memória,
+        faz read-merge-write — lê o arquivo atual, toma o MAX de damage entre
+        o valor em disco e o valor em memória, e só então escreve.
+        Isso evita que angela.py e deep_awake.py (processos simultâneos) se
+        sobrescrevam mutuamente, o que faria o damage retroceder silenciosamente.
+        atomic_json_write garante que a escrita em si não corrompe o arquivo.
+        """
         from core import atomic_json_write
         try:
-            data = {
-                "damage": float(self.damage),
-                "load": float(self.load),
-                "chronic": bool(self.chronic),
-                "last_updated": datetime.now().isoformat(),
-                "total_sessions": 1,
-                "version": "2.0.0"
-            }
+            # Lê estado atual do disco (pode ter sido escrito pelo outro processo)
+            disk_damage = 0.0
+            disk_load = 0.0
+            disk_sessions = 1
             if os.path.exists(DAMAGE_FILE):
                 try:
                     with open(DAMAGE_FILE, "r", encoding="utf-8") as f:
                         existing = json.load(f)
-                        data["total_sessions"] = existing.get("total_sessions", 1)
+                        disk_damage = float(existing.get("damage", 0.0))
+                        disk_load = float(existing.get("load", 0.0))
+                        disk_sessions = existing.get("total_sessions", 1)
                 except Exception:
                     pass
+
+            # Merge conservador: toma o máximo de damage (nunca reverte)
+            merged_damage = max(self.damage, disk_damage)
+            merged_load = max(self.load, disk_load)  # idem para load
+            self.damage = merged_damage  # mantém instância sincronizada
+            self.load = merged_load
+
+            data = {
+                "damage": float(merged_damage),
+                "load": float(merged_load),
+                "chronic": bool(self.chronic or merged_damage > 0.35),
+                "last_updated": datetime.now().isoformat(),
+                "total_sessions": disk_sessions,
+                "version": "2.0.0"
+            }
             atomic_json_write(DAMAGE_FILE, data)
         except Exception as e:
             print(f"[CognitiveFriction] ⚠️ _save_persistent_state falhou — damage não persistido: {e}")

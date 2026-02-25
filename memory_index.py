@@ -315,7 +315,12 @@ class MemoryIndex:
         friction_damage: float = 0.0,
     ) -> list:
         """Recall puramente semântico via cosine similarity de embeddings.
-        Fallback: retorna lista vazia se embeddings indisponíveis."""
+        Fallback: retorna lista vazia se embeddings indisponíveis.
+
+        Bug C fix: usa cursor iterável (fetchmany) em vez de fetchall() para
+        evitar carregar todos os embeddings em RAM de uma vez. Com 10k+ memórias
+        e vetores de 384 dims, fetchall representaria ~60MB por chamada.
+        """
         if not query or not query.strip():
             return []
 
@@ -323,29 +328,26 @@ class MemoryIndex:
         if query_vec is None:
             return []
 
-        # Carrega todos os embeddings (para corpora < 10k, isso é viável)
+        scored = []
         try:
-            rows = self._conn.execute(
+            cur = self._conn.execute(
                 "SELECT e.memory_id, e.embedding_json, m.* "
                 "FROM embeddings e JOIN memories m ON m.id = e.memory_id"
-            ).fetchall()
+            )
+            while True:
+                chunk = cur.fetchmany(200)
+                if not chunk:
+                    break
+                for row in chunk:
+                    try:
+                        vec = json.loads(row["embedding_json"])
+                        sim = _cosine_similarity(query_vec, vec)
+                    except Exception:
+                        continue
+                    emotion_boost = 0.15 if (emocao_atual and row["emocao"] == emocao_atual) else 0.0
+                    scored.append((row, sim + emotion_boost))
         except Exception:
             return []
-
-        scored = []
-        for row in rows:
-            try:
-                vec = json.loads(row["embedding_json"])
-                sim = _cosine_similarity(query_vec, vec)
-            except Exception:
-                continue
-
-            emotion_boost = 0.0
-            if emocao_atual and row["emocao"] and row["emocao"] == emocao_atual:
-                emotion_boost = 0.15
-
-            total = sim + emotion_boost
-            scored.append((row, total))
 
         scored.sort(key=lambda x: x[1], reverse=True)
 
@@ -410,20 +412,23 @@ class MemoryIndex:
         query_vec = self._embedder.embed(query)
         if query_vec is not None:
             try:
-                embed_rows = self._conn.execute(
+                # Bug C fix: itera em chunks de 200 em vez de fetchall()
+                cur_emb = self._conn.execute(
                     "SELECT e.memory_id, e.embedding_json, m.* "
                     "FROM embeddings e JOIN memories m ON m.id = e.memory_id"
-                ).fetchall()
-
-                for row in embed_rows:
-                    try:
-                        vec = json.loads(row["embedding_json"])
-                        sim = _cosine_similarity(query_vec, vec)
-                        # Normaliza cosine [-1,1] → [0,1]
-                        sim_norm = (sim + 1.0) / 2.0
-                        sem_scored[row["id"]] = (row, sim_norm)
-                    except Exception:
-                        continue
+                )
+                while True:
+                    chunk = cur_emb.fetchmany(200)
+                    if not chunk:
+                        break
+                    for row in chunk:
+                        try:
+                            vec = json.loads(row["embedding_json"])
+                            sim = _cosine_similarity(query_vec, vec)
+                            sim_norm = (sim + 1.0) / 2.0
+                            sem_scored[row["id"]] = (row, sim_norm)
+                        except Exception:
+                            continue
             except Exception:
                 pass
 
