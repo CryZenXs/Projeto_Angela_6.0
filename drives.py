@@ -18,9 +18,13 @@ class Drive:
         self.stimuli_weights = stimuli_weights
 
     def activate(self, stimulus: str, intensity: float):
-        """Aumenta nível com base no tipo de estímulo e sua intensidade."""
+        """Aumenta nível com base no tipo de estímulo e sua intensidade.
+        Aplica retornos decrescentes: quanto mais alto o drive, menor o ganho
+        efetivo. Isso impede que todos os drives saturem em ~1.0 após poucos turnos."""
         gain = self.stimuli_weights.get(stimulus, 0.0)
-        self.level = min(1.0, self.level + gain * intensity)
+        headroom = 1.0 - self.level  # espaço disponível até 1.0
+        effective_gain = gain * intensity * headroom
+        self.level = min(1.0, self.level + effective_gain)
 
     def decay(self):
         """Move nível em direção ao baseline pelo decay_rate."""
@@ -180,17 +184,17 @@ class DriveSystem:
 
     def __init__(self):
         self.drives = {
-            "SEEKING": Drive("SEEKING", baseline=0.4, decay_rate=0.03,
+            "SEEKING": Drive("SEEKING", baseline=0.4, decay_rate=0.08,
                              stimuli_weights=_SEEKING_STIMULI),
-            "FEAR": Drive("FEAR", baseline=0.1, decay_rate=0.08,
+            "FEAR": Drive("FEAR", baseline=0.1, decay_rate=0.12,
                           stimuli_weights=_FEAR_STIMULI),
-            "RAGE": Drive("RAGE", baseline=0.05, decay_rate=0.08,
+            "RAGE": Drive("RAGE", baseline=0.05, decay_rate=0.12,
                           stimuli_weights=_RAGE_STIMULI),
-            "CARE": Drive("CARE", baseline=0.3, decay_rate=0.03,
+            "CARE": Drive("CARE", baseline=0.3, decay_rate=0.08,
                           stimuli_weights=_CARE_STIMULI),
-            "PANIC_GRIEF": Drive("PANIC_GRIEF", baseline=0.1, decay_rate=0.03,
+            "PANIC_GRIEF": Drive("PANIC_GRIEF", baseline=0.1, decay_rate=0.06,
                                  stimuli_weights=_PANIC_GRIEF_STIMULI),
-            "PLAY": Drive("PLAY", baseline=0.2, decay_rate=0.08,
+            "PLAY": Drive("PLAY", baseline=0.2, decay_rate=0.10,
                           stimuli_weights=_PLAY_STIMULI),
         }
         self.load_state()
