@@ -937,23 +937,31 @@ def chat_loop():
             if response != "...":
                 real_interaction_count += 1  # conta apenas respostas reais
 
+            # ── Self-evolution: observe() a cada turno, evaluate() a cada 10 ──
+            try:
+                _reflexao_t = reflexao_temporal if 'reflexao_temporal' in dir() else ""
+                _valence_t  = corpo.compute_circumplex().valence if hasattr(corpo, 'compute_circumplex') else 0.0
+                _mask_t     = "[MASCARAMENTO]" in (response or "")
+                self_evolution.observe(
+                    drives=all_drives,
+                    emocao=str(emocao_detectada),
+                    mascaramento=_mask_t,
+                    narrativa_bloqueada=(acao == "SILENCE"),
+                    reflexao_temporal=_reflexao_t,
+                    valence=_valence_t,
+                    metacog=metacog_state,
+                )
+            except Exception:
+                pass
+
             if real_interaction_count > 0 and real_interaction_count % 10 == 0:
                 try:
-                    hot_dict = hot_state.to_dict() if hasattr(hot_state, 'to_dict') else {}
-                    changes = self_evolution.evaluate_experience(
-                        drives=all_drives,
-                        metacog=metacog_state,
-                        prediction_error=prediction.current_error,
-                        integration=integration,
-                        hot_state=hot_dict,
-                        friction_metrics=friction.external_metrics(),
-                        emocao=str(emocao_detectada),
-                        interaction_count=interaction_count
-                    )
+                    changes = self_evolution.evaluate(interaction_count=interaction_count)
                     if changes:
                         applied = self_evolution.apply_updates(max_per_cycle=1)
                         for a in applied:
                             print(f"🧬 Auto-evolução: {a['action']} → {a['value']}")
+                        print(self_evolution.get_pattern_summary())
                 except Exception as e:
                     print(f"⚠️ Self-evolution: {e}")
 
