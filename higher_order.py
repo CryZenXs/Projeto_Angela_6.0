@@ -210,6 +210,17 @@ class HigherOrderMonitor:
                     if cleaned.startswith(prefix):
                         cleaned = cleaned[len(prefix):].strip()
                 
+                # Rejeita se estiver em segunda pessoa — significa que o LLM
+                # confundiu perspectiva (gerou "você sente" em vez de "eu sinto")
+                segunda_pessoa = any(
+                    cleaned.lower().startswith(p)
+                    for p in ("você ", "vocês ", "você\n", "o usuário", "vinicius ")
+                )
+                if segunda_pessoa:
+                    return self._generate_fallback_narrative(
+                        clarity, ownership, confidence, dominant_drive
+                    )
+                
                 # Limita tamanho
                 if len(cleaned) > 200:
                     # Corta na primeira frase completa após 100 chars

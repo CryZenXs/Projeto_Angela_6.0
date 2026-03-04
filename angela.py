@@ -785,7 +785,7 @@ def chat_loop():
                     reflexao_corporal = generate(
                         f"[drive={_drive_dom} | emocao={_emocao_atual} | tensao={corpo.tensao:.2f} | fluidez={corpo.fluidez:.2f}]\n"
                         f"Percebi sensações: {sensacao_texto}. "
-                        f"Reflita o significado emocional em 1 frase, sem repetir a descrição literal.",
+                        f"Primeira pessoa singular. Reflita o significado emocional em 1 frase curta, sem repetir a descrição literal.",
                         friction=friction
                     )
                     if reflexao_corporal.strip().startswith(sensacao_texto[:20]):
@@ -892,7 +892,19 @@ def chat_loop():
 
             reflexao_temporal = ""  # inicializa antes do try para evitar NameError se a geração falhar
             try:
-                memorias_passadas_list = load_jsonl("angela_memory.jsonl")[-5:]
+                # Lê apenas as últimas 5 entradas sem carregar o arquivo inteiro (Bug P fix)
+                from collections import deque as _dq
+                import json as _js
+                _memorias_passadas_list = []
+                try:
+                    with open("angela_memory.jsonl", "r", encoding="utf-8") as _mf:
+                        for _ln in list(_dq(_mf, maxlen=5)):
+                            _ln = _ln.strip()
+                            if _ln:
+                                try: _memorias_passadas_list.append(_js.loads(_ln))
+                                except Exception: pass
+                except Exception: pass
+                memorias_passadas_list = _memorias_passadas_list
                 reflexao_temporal = gerar_reflexao_temporal(
                     {"emocao": emocao_detectada, "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S")},
                     memorias_passadas_list
@@ -937,31 +949,23 @@ def chat_loop():
             if response != "...":
                 real_interaction_count += 1  # conta apenas respostas reais
 
-            # ── Self-evolution: observe() a cada turno, evaluate() a cada 10 ──
-            try:
-                _reflexao_t = reflexao_temporal if 'reflexao_temporal' in dir() else ""
-                _valence_t  = corpo.compute_circumplex().valence if hasattr(corpo, 'compute_circumplex') else 0.0
-                _mask_t     = "[MASCARAMENTO]" in (response or "")
-                self_evolution.observe(
-                    drives=all_drives,
-                    emocao=str(emocao_detectada),
-                    mascaramento=_mask_t,
-                    narrativa_bloqueada=(acao == "SILENCE"),
-                    reflexao_temporal=_reflexao_t,
-                    valence=_valence_t,
-                    metacog=metacog_state,
-                )
-            except Exception:
-                pass
-
             if real_interaction_count > 0 and real_interaction_count % 10 == 0:
                 try:
-                    changes = self_evolution.evaluate(interaction_count=interaction_count)
+                    hot_dict = hot_state.to_dict() if hasattr(hot_state, 'to_dict') else {}
+                    changes = self_evolution.evaluate_experience(
+                        drives=all_drives,
+                        metacog=metacog_state,
+                        prediction_error=prediction.current_error,
+                        integration=integration,
+                        hot_state=hot_dict,
+                        friction_metrics=friction.external_metrics(),
+                        emocao=str(emocao_detectada),
+                        interaction_count=interaction_count
+                    )
                     if changes:
                         applied = self_evolution.apply_updates(max_per_cycle=1)
                         for a in applied:
                             print(f"🧬 Auto-evolução: {a['action']} → {a['value']}")
-                        print(self_evolution.get_pattern_summary())
                 except Exception as e:
                     print(f"⚠️ Self-evolution: {e}")
 

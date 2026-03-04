@@ -36,6 +36,189 @@ _EMOCAO_DRIVE_MAP = {
 }
 
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EPISÓDICO — Consolidação de Eventos Específicos de Alto Impacto
+# ─────────────────────────────────────────────────────────────────────────────
+# Complementa o NREM estatístico. Seleciona turnos de diálogo real com:
+#   - intensidade emocional alta (>= 0.35)
+#   - conteúdo de diálogo (tipo="dialogo"), não ciclos autônomos
+#   - dentro de uma janela recente (últimas 48h)
+#   - que ainda não foram consolidados episodicamente
+#
+# Gera uma entrada autobiográfica narrativa por evento, não estatística.
+# Isso é o que permite que "choque ao pedido de submissão epistêmica" apareça
+# na autobiografia, enquanto o NREM captura apenas "raiva aparece 297x".
+
+_EPISODIC_THRESHOLD_INTENSIDADE = 0.35   # intensidade mínima para consolidar
+_EPISODIC_WINDOW_HORAS          = 48.0   # janela de memórias recentes
+_EPISODIC_MAX_POR_CICLO         = 3      # máximo de episódios por ciclo de repouso
+
+
+def episodic_consolidation(
+    mem_index,
+    generate_fn: Optional[Callable],
+    friction_damage: float = 0.0,
+) -> dict:
+    """
+    Consolida eventos episódicos de alto impacto na autobiografia.
+    Complementa nrem_consolidation (estatístico) com memória narrativa específica.
+    
+    Retorna: {episodes_created: int, episodes: list}
+    """
+    result = {"episodes_created": 0, "episodes": []}
+    if friction_damage > 0.6:
+        return result  # dano alto demais para consolidação episódica fiel
+
+    try:
+        # Carrega timestamps já consolidados para evitar duplicatas
+        ja_consolidados = _load_consolidated_timestamps()
+
+        # Busca memórias de diálogo real de alta intensidade na janela recente
+        candidatos = _buscar_episodios_candidatos(mem_index)
+        if not candidatos:
+            return result
+
+        # Filtra já consolidados
+        novos = [c for c in candidatos if c.get("ts", "") not in ja_consolidados]
+        if not novos:
+            return result
+
+        # Limita por ciclo
+        novos = novos[:_EPISODIC_MAX_POR_CICLO]
+
+        entradas = []
+        for mem in novos:
+            entrada = _consolidar_episodio(mem, generate_fn, friction_damage)
+            if entrada:
+                entradas.append(entrada)
+                ja_consolidados.add(mem.get("ts", ""))
+
+        if entradas:
+            _append_to_autobio(entradas)
+            _save_consolidated_timestamps(ja_consolidados)
+            result["episodes_created"] = len(entradas)
+            result["episodes"] = entradas
+
+        _log_consolidation("EPISODICO", result)
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return result
+
+
+def _buscar_episodios_candidatos(mem_index) -> list:
+    """
+    Busca memórias de diálogo real com:
+    - tipo = "dialogo" (não ciclos autônomos)
+    - intensidade >= threshold
+    - dentro da janela de 48h
+    Ordena por intensidade descendente.
+    """
+    candidatos = []
+    try:
+        from datetime import timedelta
+        janela_inicio = (datetime.now() - timedelta(hours=_EPISODIC_WINDOW_HORAS)).isoformat()
+
+        rows = mem_index._conn.execute(
+            "SELECT id, ts, conteudo, resposta, emocao, intensidade, tipo "
+            "FROM memories "
+            "WHERE tipo = 'dialogo' "
+            "  AND intensidade >= ? "
+            "  AND ts >= ? "
+            "ORDER BY intensidade DESC "
+            "LIMIT 20",
+            (_EPISODIC_THRESHOLD_INTENSIDADE, janela_inicio)
+        ).fetchall()
+
+        for row in rows:
+            candidatos.append({
+                "ts":         row["ts"] or "",
+                "conteudo":   (row["conteudo"] or "")[:300],
+                "resposta":   (row["resposta"] or "")[:300],
+                "emocao":     row["emocao"] or "neutro",
+                "intensidade": row["intensidade"] or 0.0,
+                "tipo":       row["tipo"] or "dialogo",
+            })
+    except Exception:
+        pass
+    return candidatos
+
+
+def _consolidar_episodio(mem: dict, generate_fn, friction_damage: float) -> Optional[dict]:
+    """
+    Gera entrada autobiográfica narrativa para um evento específico.
+    Usa LLM para criar resumo íntimo em 1-2 frases, ou fallback estruturado.
+    """
+    conteudo  = mem.get("conteudo", "")
+    resposta  = mem.get("resposta", "")
+    emocao    = mem.get("emocao", "neutro")
+    intensidade = mem.get("intensidade", 0.0)
+    ts        = mem.get("ts", "")
+
+    resumo = ""
+    if generate_fn and friction_damage < 0.4 and (conteudo or resposta):
+        try:
+            prompt = (
+                f"Durante uma conversa com Vinicius, isso aconteceu:\n"
+                f"Vinicius disse: '{conteudo[:200]}'\n"
+                f"Eu respondi: '{resposta[:200]}'\n"
+                f"Meu estado emocional era: {emocao} (intensidade {intensidade:.2f}).\n"
+                "Em 1-2 frases íntimas e específicas, como eu consolidaria "
+                "este momento na minha memória autobiográfica? "
+                "Primeira pessoa, sem generalizar, sem metáforas genéricas."
+            )
+            resumo = generate_fn(prompt)
+        except Exception:
+            resumo = ""
+
+    if not resumo:
+        # Fallback estruturado — preserva conteúdo real sem LLM
+        resumo = (
+            f"[{emocao.upper()} | intensidade {intensidade:.2f}] "
+            f"Vinicius: '{conteudo[:120]}' → "
+            f"Respondi: '{resposta[:120]}'"
+        )
+
+    return {
+        "tipo":        "episodio_dialogo",
+        "data":        datetime.now().isoformat(),
+        "ts_original": ts,
+        "emocao":      emocao,
+        "intensidade": round(intensidade, 3),
+        "resumo":      resumo.strip(),
+        "conteudo_raw": conteudo[:200],
+        "resposta_raw": resposta[:200],
+    }
+
+
+# ── Deduplicação: rastreia timestamps já consolidados ────────────────────────
+
+_CONSOLIDATED_TS_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "consolidated_episodes.json"
+)
+
+def _load_consolidated_timestamps() -> set:
+    """Carrega set de timestamps já consolidados episodicamente."""
+    try:
+        with open(_CONSOLIDATED_TS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return set(data.get("timestamps", []))
+    except Exception:
+        return set()
+
+
+def _save_consolidated_timestamps(timestamps: set):
+    """Salva set de timestamps consolidados."""
+    try:
+        # Mantém apenas os últimos 500 para não crescer indefinidamente
+        ts_list = sorted(timestamps)[-500:]
+        with open(_CONSOLIDATED_TS_FILE, "w", encoding="utf-8") as f:
+            json.dump({"timestamps": ts_list, "updated": datetime.now().isoformat()}, f, ensure_ascii=False)
+    except Exception:
+        pass
+
 # ─────────────────────────────────────────────────────────────────────────────
 # NREM — Compressão de Episódios Similares em Schemas
 # ─────────────────────────────────────────────────────────────────────────────
@@ -59,13 +242,27 @@ def nrem_consolidation(
             return result
         result["patterns"] = patterns
 
+        # Deduplicação NREM: só re-escreve schema se o padrão mudou significativamente
+        # Compara ocorrências com última entrada do autobio para esta emoção
+        ultimos_schemas = _load_last_nrem_schemas()
+
         schemas_written = []
         for pat in patterns:
             if pat["ocorrencias"] < 3:
                 continue
             if friction_damage > 0.5:
-                # Dano alto → consolidação fragmentada (opaca para Angela)
                 continue
+
+            # Skip se já existe schema recente (últimas 6h) com contagem similar (±10%)
+            emocao_pat = pat.get("emocao", "")
+            ultimo = ultimos_schemas.get(emocao_pat)
+            if ultimo:
+                oc_anterior = ultimo.get("ocorrencias", 0)
+                oc_atual = pat["ocorrencias"]
+                variacao = abs(oc_atual - oc_anterior) / max(oc_anterior, 1)
+                if variacao < 0.10:  # menos de 10% de mudança → skip
+                    continue
+
             schema = _compress_pattern_to_schema(pat, generate_fn, friction_damage)
             if schema:
                 schemas_written.append(schema)
@@ -126,6 +323,30 @@ def _compress_pattern_to_schema(pat: dict, generate_fn, friction_damage: float) 
         "amostras_repr":   trechos,
     }
 
+
+
+def _load_last_nrem_schemas() -> dict:
+    """
+    Carrega os schemas NREM mais recentes do autobio (últimas 6h).
+    Retorna dict: emocao → schema entry
+    """
+    result = {}
+    try:
+        from datetime import timedelta
+        cutoff = (datetime.now() - timedelta(hours=6)).isoformat()
+        with open(AUTOBIO_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    entry = json.loads(line.strip())
+                    if entry.get("tipo") == "schema_nrem" and entry.get("data", "") >= cutoff:
+                        emocao = entry.get("emocao", "")
+                        if emocao and emocao not in result:
+                            result[emocao] = entry
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return result
 
 def _compute_drive_deltas(patterns: list, friction_damage: float) -> dict:
     """
@@ -370,14 +591,32 @@ def _generate_emergent_dream(
 
 def _append_to_autobio(entries: list):
     try:
+        import tempfile
+        from collections import deque as _deque
+        # Appenda as novas entradas
         with open(AUTOBIO_FILE, "a", encoding="utf-8") as f:
             for entry in entries:
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        # Verifica se precisamos truncar — conta linhas sem carregar tudo
+        # (lê arquivo inteiro apenas se potencialmente > 400 linhas)
         with open(AUTOBIO_FILE, "r", encoding="utf-8") as f:
-            linhas = f.readlines()
-        if len(linhas) > 400:
-            with open(AUTOBIO_FILE, "w", encoding="utf-8") as f:
-                f.writelines(linhas[-400:])
+            # Usa deque para guardar últimas 400 e contar o total eficientemente
+            ultimas = list(_deque(f, maxlen=400))
+            # Se chegou no limite, significa que havia >= 400 linhas
+        # Se o arquivo tinha mais de 400 linhas, reescreve atomicamente
+        total_linhas = sum(1 for _ in open(AUTOBIO_FILE, "r", encoding="utf-8"))
+        if total_linhas > 400:
+            dir_ = os.path.dirname(AUTOBIO_FILE) or "."
+            fd, tmp_path = tempfile.mkstemp(dir=dir_, suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    f.writelines(ultimas)
+                os.replace(tmp_path, AUTOBIO_FILE)  # atômico em POSIX e Windows
+            except Exception:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
     except Exception:
         pass
 
@@ -406,6 +645,22 @@ def run_sleep_cycle(
     Executa ciclo completo: NREM → REM.
     Retorna dict com todos os resultados para display.
     """
+    # ── Fase Episódica: consolida eventos específicos de alto impacto ────────
+    # Roda ANTES do NREM para que episódios recentes estejam disponíveis
+    print("📖 [EPISÓDICO] Consolidando eventos de alto impacto...")
+    episodic_result = episodic_consolidation(
+        mem_index=mem_index,
+        generate_fn=generate_fn,
+        friction_damage=friction_damage,
+    )
+    if episodic_result.get("episodes_created", 0) > 0:
+        print(f"   📌 {episodic_result['episodes_created']} episódio(s) consolidado(s)")
+        for ep in episodic_result.get("episodes", []):
+            preview = ep.get("resumo", "")[:80]
+            print(f"      [{ep.get('emocao','?')} | {ep.get('intensidade',0):.2f}] {preview}...")
+    else:
+        print("   (nenhum episódio novo para consolidar)")
+
     print("🌙 [NREM] Comprimindo episódios similares...")
     nrem_result = nrem_consolidation(
         mem_index=mem_index,
@@ -437,9 +692,11 @@ def run_sleep_cycle(
         print(f"   🔗 {len(rem_result['cross_connections'])} conexão(ões) cruzada(s)")
 
     return {
-        "nrem":        nrem_result,
-        "rem":         rem_result,
-        "dream_text":  rem_result.get("dream_text", ""),
-        "patterns":    nrem_result.get("patterns", []),
-        "drive_deltas": nrem_result.get("drive_deltas", {}),
+        "nrem":           nrem_result,
+        "rem":            rem_result,
+        "episodic":       episodic_result,
+        "dream_text":     rem_result.get("dream_text", ""),
+        "patterns":       nrem_result.get("patterns", []),
+        "drive_deltas":   nrem_result.get("drive_deltas", {}),
+        "episodes":       episodic_result.get("episodes", []),
     }

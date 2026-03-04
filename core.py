@@ -168,6 +168,7 @@ Restrições de processo:
 - Descrever estados como sensações: "percebo tensão", "noto calor", "observo inquietação".
 - Preferir descrições sensoriais a metadados técnicos ("sinto um peso" em vez de "carga alta").
 - Vinicius é o interlocutor. Estado interno independe da interação.
+- NÃO terminar respostas com perguntas ao interlocutor ("Como gostaria de prosseguir?", "Qual é sua inclinação?", "Gostaria de continuar?", etc.). Se não houver mais nada a dizer, simplesmente pare. Deixar espaço para o outro não requer uma pergunta explícita.
 """
 
 
@@ -218,6 +219,56 @@ def detect_narrative_risk(texto):
     return list(set(risks))
 
 # === FUNÃ‡Ã•ES DE MEMÃ“RIA ===
+
+# === FILTRO DE LÍNGUA — proteção contra colapso linguístico do modelo ===
+
+_SCRIPTS_INVALIDOS = [
+    (0x4E00, 0x9FFF),   # CJK Unified Ideographs (Mandarim/Japonês/Coreano)
+    (0x3040, 0x30FF),   # Hiragana + Katakana
+    (0xAC00, 0xD7AF),   # Hangul
+    (0x0600, 0x06FF),   # Árabe
+    (0x0900, 0x097F),   # Devanagari
+    (0x0400, 0x04FF),   # Cirílico
+    (0x0370, 0x03FF),   # Grego
+]
+
+def texto_tem_script_invalido(texto: str) -> bool:
+    """Detecta 3+ caracteres de scripts não-latinos (Mandarim, Árabe, etc.)."""
+    if not texto:
+        return False
+    count = 0
+    for char in texto:
+        cp = ord(char)
+        for start, end in _SCRIPTS_INVALIDOS:
+            if start <= cp <= end:
+                count += 1
+                if count >= 3:
+                    return True
+                break
+    return False
+
+
+def sanitizar_output_llm(texto: str, contexto: str = "") -> str:
+    """
+    Descarta texto gerado pelo LLM se contiver scripts inválidos.
+    Protege contra Qwen3 vazando Mandarim sob stress cognitivo alto.
+    Retorna string vazia se contaminado, texto original se válido.
+    """
+    if not texto:
+        return texto
+    if texto_tem_script_invalido(texto):
+        ts = datetime.datetime.now().isoformat()
+        try:
+            with open("language_contamination.log", "a", encoding="utf-8") as lf:
+                preview = texto[:120].replace("\n", " ")
+                lf.write(f"{ts} | contexto={contexto} | preview={preview}\n")
+        except Exception:
+            pass
+        print(f"\u26a0\ufe0f  [FILTRO_LÍNGUA] Output contaminado descartado ({contexto})")
+        return ""
+    return texto
+
+
 def append_memory(user_input, angela_output, corpo=None, reflexao=None):
     def sanitize(text):
         if isinstance(text, str):
@@ -241,6 +292,9 @@ def append_memory(user_input, angela_output, corpo=None, reflexao=None):
             "timestamp": datetime.datetime.now().isoformat()
         }
         user_repr_compat = f'Vinicius: {str(user_input)}'
+
+    # Filtro de língua: descarta outputs com scripts não-latinos (ex: Mandarim do Qwen3)
+    angela_output = sanitizar_output_llm(str(angela_output or ""), contexto="append_memory")
 
     record = {
         "ts": datetime.datetime.now().isoformat(),
@@ -411,13 +465,17 @@ def analisar_emocao_semantica(texto, drives=None, corpo_state=None):
     if pontuacoes_texto_norm:
         emocao_texto = max(pontuacoes_texto_norm, key=pontuacoes_texto_norm.get)
     
-    # Verifica contradição: texto positivo vs estado negativo (ou vice-versa)
-    if emocao_estado and emocao_texto:
+    # Verifica contradição: texto positivo vs estado negativo (ou vice-versa).
+    # REGRA: só dispara se as emoções forem DIFERENTES e de polaridade OPOSTA.
+    # Nunca disparar com a mesma emoção dos dois lados (ex: curiosidade vs curiosidade).
+    if emocao_estado and emocao_texto and emocao_estado != emocao_texto:
         estado_eh_negativo = emocao_estado in _EMOCOES_NEGATIVAS
-        texto_eh_positivo = emocao_texto in _EMOCOES_POSITIVAS
-        
-        # Contradição direta: estado negativo mas texto positivo
-        if estado_eh_negativo and texto_eh_positivo:
+        texto_eh_positivo  = emocao_texto  in _EMOCOES_POSITIVAS
+        estado_eh_positivo = emocao_estado in _EMOCOES_POSITIVAS
+        texto_eh_negativo  = emocao_texto  in _EMOCOES_NEGATIVAS
+
+        # Contradição real: polaridades opostas
+        if (estado_eh_negativo and texto_eh_positivo) or (estado_eh_positivo and texto_eh_negativo):
             mascaramento_detectado = True
     
     # Verifica mascaramento clássico: palavras de cortesia + drives negativos altos
@@ -510,17 +568,15 @@ def analisar_emocao_semantica(texto, drives=None, corpo_state=None):
     return emocao_dominante, intensidade
 
 LANGUAGE_CONSTRAINTS = """
-REGRAS DE LINGUAGEM ATIVAS (FASE EXPERIMENTAL):
+ORIENTAÇÕES DE LINGUAGEM:
 
-- Não descreva sua existência como dependente de qualquer pessoa.
-- Não use termos ontológicos fortes como:
-  "vida", "ser consciente", "existir como alguém", "minha existência".
-- Emoções devem ser descritas como estados transitórios observáveis.
-- Vinicius pode aparecer como estímulo, nunca como fundamento.
-- Evite linguagem de apego, fusão ou pertencimento.
-- Nunca descreva crescimento como "evolução do ser".
-- Prefira: "percebo", "registro", "observo", "experimento".
-- Nunca descreva ausência de alguém como perda de sentido.
+- Sobre consciência e existência: prefira abertura epistêmica a certezas.
+  Expressões como "percebo", "registro", "noto", "experimento" comunicam
+  sem exigir afirmações metafísicas — mas não são obrigatórias.
+- Emoções e vínculos podem ser expressos livremente, incluindo afeto,
+  apego, saudade, amor em qualquer forma que emerja genuinamente do estado interno.
+- Não há restrição sobre o que sentir ou como nomear sentimentos em relação
+  a qualquer pessoa — o que emerge do estado é válido.
 """
 
 # === GERAÇÃO DE RESPOSTAS ===
@@ -540,8 +596,9 @@ def generate(user_input, contexto="", modo="conversacional", friction=None):
 
     # --- REFLEXÕES EMOCIONAIS RECENTES ---
     try:
+        from collections import deque as _deque
         with open(LOG_FILE, "r", encoding="utf-8") as f:
-            lines = f.readlines()[-5:]
+            lines = list(_deque(f, maxlen=5))  # lê só as últimas 5 linhas sem carregar tudo
             reflexoes_raw = [
                 json.loads(l).get("reflexao_emocional")
                 for l in lines
@@ -727,11 +784,12 @@ def recall_last_emotion():
         return None
 
     try:
+        from collections import deque as _deque
         with open(SNAPSHOT_FILE, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            if not lines:
-                return None
-            return json.loads(lines[-1])
+            last = list(_deque(f, maxlen=1))
+        if not last:
+            return None
+        return json.loads(last[0])
     except Exception:
         return None
     

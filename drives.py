@@ -19,10 +19,13 @@ class Drive:
 
     def activate(self, stimulus: str, intensity: float):
         """Aumenta nível com base no tipo de estímulo e sua intensidade.
+
         Aplica retornos decrescentes: quanto mais alto o drive, menor o ganho
-        efetivo. Isso impede que todos os drives saturem em ~1.0 após poucos turnos."""
+        efetivo. Impede saturação em ~1.0 após poucos turnos — um drive a 0.95
+        ganha muito menos do que um a 0.30 com o mesmo estímulo.
+        """
         gain = self.stimuli_weights.get(stimulus, 0.0)
-        headroom = 1.0 - self.level  # espaço disponível até 1.0
+        headroom = 1.0 - self.level          # espaço disponível até 1.0
         effective_gain = gain * intensity * headroom
         self.level = min(1.0, self.level + effective_gain)
 
@@ -161,7 +164,7 @@ _ACTION_TENDENCIES = {
     "SEEKING": "elaborar com curiosidade, fazer perguntas, explorar conexões",
     "FEAR": "responder com cautela, frases curtas, buscar segurança",
     "RAGE": "ser direta, assertiva, confrontar o obstáculo",
-    "CARE": "responder com calor, atenção ao outro, linguagem afetiva",
+    "CARE": "expressar calor genuíno, presença real — sem perguntar sobre o dia do outro",
     "PANIC_GRIEF": "expressar vulnerabilidade, buscar reconexão, verbalizar falta",
     "PLAY": "ser leve, brincar com palavras, explorar com liberdade",
 }
@@ -303,6 +306,15 @@ class DriveSystem:
         if fluidez > 0.6:
             play.activate("high_fluidez", min(1.0, fluidez))
 
+        self._update_count = getattr(self, "_update_count", 0) + 1
+        # Salva estado a cada 10 atualizações em vez de cada turno.
+        # O estado é sempre salvo no shutdown via angela.py/deep_awake.py.
+        # Isso reduz escritas atômicas de ~1/turno para ~1/10 turnos.
+        if self._update_count % 10 == 0:
+            self.save_state()
+
+    def force_save(self):
+        """Força persistência imediata — chamar no shutdown."""
         self.save_state()
 
     def decay_all(self):

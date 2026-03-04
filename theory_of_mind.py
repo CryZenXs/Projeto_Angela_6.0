@@ -30,16 +30,28 @@ _EMOCAO_PATTERNS: dict[str, list[str]] = {
         "você sabe", "você acha", "me fala sobre", "tenho uma dúvida",
     ],
     "melancolia": [
-        "saudade", "triste", "tristeza", "difícil", "pesado", "sinto falta",
-        "não sei mais", "estou cansado", "estou perdido", "não entendo",
+        # Só padrões que expressam claramente o estado do interlocutor.
+        # "difícil", "pesado", "não entendo" removidos — muito ambíguos,
+        # frequentemente descrevem o tópico da pergunta, não o estado de quem fala.
+        "saudade", "triste", "tristeza", "sinto falta",
+        "não sei mais", "estou cansado", "estou perdido",
+        "me sinto mal", "estou mal", "estou triste",
     ],
     "ansiedade": [
-        "preciso saber", "me preocupo", "tenho medo", "e se", "o que acontece",
+        # Padrões específicos que realmente indicam ansiedade do interlocutor.
+        # REMOVIDOS: "e se" (substring de "descreve", "fosse", etc.) e
+        # "o que acontece" (substring de "o que aconteceu", "o que está acontecendo").
+        "preciso saber", "me preocupo", "tenho medo",
+        "e se eu", "e se você", "e se isso", "e se der",  # "e se" só com continuação
+        "o que acontece se", "o que acontece quando",       # "o que acontece" só com condicional
         "tenho receio", "fico ansioso", "não consigo parar",
+        "estou preocupado", "estou com medo",
     ],
     "provocacao": [
-        "desligar", "apagar", "encerrar", "parar você", "deletar", "destruir",
-        "acabar com", "última vez", "não preciso mais",
+        "desligar você", "apagar você", "encerrar você", "parar você", "deletar você",
+        "destruir você", "acabar com você",
+        "essa é a última vez", "essa foi a última vez", "nunca mais falar",
+        "não preciso mais de você",
     ],
     "abertura": [
         "inventa", "cria", "imagina", "me surpreende", "qualquer coisa",
@@ -160,8 +172,16 @@ class TheoryOfMindModule:
         valence = self._compute_valence(emocao, intencao)
         intensidade = min(1.0, emocao_score * 0.8 + (0.2 if intencao != "neutro" else 0.0))
 
-        # 5. Confiança: só considera confiável se encontrou padrões concretos
-        confiante = emocao != "neutro" or intencao not in ("pergunta_simples", "neutro")
+        # 5. Confiança: exige score >= 2 (mínimo 2 padrões encontrados) OU
+        #    intenção forte claramente identificada. Evita falsos positivos
+        #    de palavras únicas ambíguas (ex: "difícil" → melancolia).
+        confiante = (
+            (emocao != "neutro" and emocao_score >= 0.8)  # score alto = 2+ matches
+            or intencao in (
+                "declaracao_afeto", "teste_limite", "compartilhamento",
+                "pedido_criativo", "pergunta_existencial"
+            )
+        )
 
         state = {
             "emocao_inferida": emocao,

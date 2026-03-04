@@ -4,6 +4,16 @@ import json
 import random
 from datetime import datetime
 
+# Constante de módulo — evita recriar o dict a cada chamada de _traduzir()
+_QUADRANT_CONTEXT = {
+    "excitacao":  "uma energia que busca direção",
+    "excitação":  "uma energia que busca direção",
+    "serenidade": "um fundo de calma que sustenta tudo",
+    "angustia":   "algo que pressiona sem nome",
+    "angústia":   "algo que pressiona sem nome",
+    "melancolia": "um peso silencioso que permanece",
+}
+
 class Interoceptor:
     """
     Sistema que monitora o corpo digital e converte variações fisiológicas
@@ -108,14 +118,6 @@ class Interoceptor:
             # Só adiciona contexto do quadrante se houver outras sensações
             # e se o quadrante não for neutro (evita redundância)
             if sensacoes and quadrante != "neutro":
-                _QUADRANT_CONTEXT = {
-                    "excitacao":  "uma energia que busca direção",
-                    "excitação":  "uma energia que busca direção",
-                    "serenidade": "um fundo de calma que sustenta tudo",
-                    "angustia":   "algo que pressiona sem nome",
-                    "angústia":   "algo que pressiona sem nome",
-                    "melancolia": "um peso silencioso que permanece",
-                }
                 ctx = _QUADRANT_CONTEXT.get(quadrante)
                 if ctx and ctx not in " ".join(sensacoes):
                     sensacoes.append(ctx)

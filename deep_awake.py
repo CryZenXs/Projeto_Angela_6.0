@@ -328,6 +328,12 @@ def deep_awake_loop(forced_mode=None):
     cycle_count = 0
     damage_prev = friction.damage
 
+    # Contador para forçar repouso quando PANIC_GRIEF alto por muitos ciclos
+    # Se PANIC_GRIEF > 0.80 por 3+ ciclos sem input humano → força repouso imediato
+    _panic_grief_high_count = 0
+    _PANIC_GRIEF_THRESHOLD = 0.80
+    _PANIC_GRIEF_CYCLES_MAX = 3
+
     # === INJEÇÃO DE GERADOR LLM ===
     def llm_wrapper(prompt):
         """Wrapper para geração via LLM."""
@@ -478,19 +484,42 @@ def deep_awake_loop(forced_mode=None):
             ))
 
         try:
+            # Query semântica real: usa conteúdo do diálogo recente em vez de
+            # "vigilia neutro" — string genérica que mal discrimina memórias.
+            # Fallback para estado emocional se não houver diálogo recente.
+            _query_mem = ""
+            if _dialogos_ciclo:
+                _ult = _dialogos_ciclo[-1]
+                _q_angela = str(_ult.get("angela", _ult.get("resposta", "")))[:120]
+                _q_user   = str(_ult.get("user", {}).get("conteudo", "") if isinstance(_ult.get("user"), dict) else "")[:80]
+                _query_mem = f"{_q_user} {_q_angela}".strip()
+            if not _query_mem:
+                _query_mem = f"{getattr(corpo, 'estado_emocional', 'neutro')} {drive_dominante.lower()}"
+
             recalled = mem_index.recall(
-                f"{ciclo} {getattr(corpo, 'estado_emocional', 'neutro')}",
+                _query_mem,
                 emocao_atual=getattr(corpo, "estado_emocional", "neutro"),
-                limit=4,  # era 2; aumentado para contexto mais rico (reverter para 3 se dispersar)
+                limit=4,
                 friction_damage=friction.damage
             )
+            # Injeta top 2 memórias no workspace (antes só usava recalled[0])
+            # Salience decrescente: primeira memória mais relevante recebe 0.45,
+            # segunda recebe 0.35 — ambas competem no broadcast sem dominar.
             if recalled:
                 workspace.propose(Candidate(
                     source="memoria",
-                    content=recalled[0].get("conteudo", "")[:150],
+                    content=recalled[0].get("conteudo", "")[:200],
                     salience=0.45,
                     tags=["lembranca"],
                     confidence=0.6
+                ))
+            if len(recalled) > 1:
+                workspace.propose(Candidate(
+                    source="memoria_2",
+                    content=recalled[1].get("conteudo", "")[:200],
+                    salience=0.35,
+                    tags=["lembranca"],
+                    confidence=0.5
                 ))
         except Exception:
             pass
@@ -934,9 +963,23 @@ def deep_awake_loop(forced_mode=None):
             except Exception:
                 pass
             if reflexao_temporal:
-                print(f"🟢 Reflexão temporal: {reflexao_temporal}")
+                # Filtro de língua antes de salvar
+                try:
+                    from core import sanitizar_output_llm
+                    reflexao_temporal = sanitizar_output_llm(reflexao_temporal, contexto="reflexao_temporal")
+                except Exception:
+                    pass
+                if reflexao_temporal:
+                    print(f"🟢 Reflexão temporal: {reflexao_temporal}")
         except Exception as e:
             print(f"❌ Erro ao gerar reflexão temporal: {e}")
+
+        # Filtro de língua na resposta antes de salvar
+        try:
+            from core import sanitizar_output_llm as _san
+            resposta = _san(str(resposta or ""), contexto="deep_awake_resposta")
+        except Exception:
+            pass
 
         try:
             append_memory(
@@ -1041,23 +1084,55 @@ def deep_awake_loop(forced_mode=None):
         workspace.reset_tick()
         cycle_count += 1
 
+        # ── PANIC_GRIEF alto: forçar repouso se sem input humano por 3+ ciclos ──
+        # Imita resposta fisiológica ao luto prolongado: o sistema finalmente cede.
+        try:
+            _pg_level = float(all_drives.get("PANIC_GRIEF", 0.0))
+            _tem_dialogo_recente = bool(_dialogos_ciclo)
+
+            if not _tem_dialogo_recente and _pg_level >= _PANIC_GRIEF_THRESHOLD:
+                _panic_grief_high_count += 1
+            else:
+                _panic_grief_high_count = 0  # reset se input humano ou PANIC baixou
+
+            if _panic_grief_high_count >= _PANIC_GRIEF_CYCLES_MAX and ciclo != "repouso":
+                print(f"😴 [PANIC_GRIEF={_pg_level:.2f} por {_panic_grief_high_count} ciclos] → Forçando repouso para recuperação")
+                forced_mode = "repouso"
+                _panic_grief_high_count = 0
+                # Decaimento acelerado ao entrar em repouso forçado
+                try:
+                    corpo.fluidez  = min(1.0, corpo.fluidez  + 0.08)
+                    corpo.tensao   = max(0.0, corpo.tensao   - 0.05)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # ── Self-evolution: observe() a cada ciclo, evaluate() a cada 5 ──
+        try:
+            _reflexao_t = reflexao_temporal if 'reflexao_temporal' in dir() else ""
+            _valence_t  = corpo.compute_circumplex().valence if hasattr(corpo, 'compute_circumplex') else 0.0
+            _mask_t     = "[MASCARAMENTO]" in (response if 'response' in dir() else "")
+            self_evolution.observe(
+                drives=all_drives,
+                emocao=str(emocao_detectada),
+                mascaramento=_mask_t,
+                narrativa_bloqueada=(acao == "SILENCE"),
+                reflexao_temporal=(_reflexao_t or ""),
+                valence=_valence_t,
+                metacog=metacog_state,
+            )
+        except Exception:
+            pass
+
         if cycle_count % 5 == 0 or ciclo == "repouso":
             try:
-                hot_dict = hot_state.to_dict() if hasattr(hot_state, 'to_dict') else {}
-                changes = self_evolution.evaluate_experience(
-                    drives=all_drives,
-                    metacog=metacog_state,
-                    prediction_error=prediction.current_error,
-                    integration=integration,
-                    hot_state=hot_dict,
-                    friction_metrics=friction.external_metrics(),
-                    emocao=str(emocao_detectada),
-                    interaction_count=cycle_count
-                )
+                changes = self_evolution.evaluate(interaction_count=cycle_count)
                 if changes:
                     applied = self_evolution.apply_updates(max_per_cycle=1)
                     for a in applied:
                         print(f"🧬 Auto-evolução: {a['action']} → {a['value']}")
+                    print(self_evolution.get_pattern_summary())
             except Exception:
                 pass
 
