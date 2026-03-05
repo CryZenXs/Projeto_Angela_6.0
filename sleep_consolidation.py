@@ -32,6 +32,7 @@ _EMOCAO_DRIVE_MAP = {
     "afeto":       {"CARE": +0.05, "SEEKING": +0.01},
     "saudade":     {"PANIC_GRIEF": +0.05},
     "satisfacao":  {"SEEKING": +0.02, "PLAY": +0.02},
+    "desejo":      {"LUST": +0.05, "CARE": +0.02},
     "neutro":      {},
 }
 
@@ -210,12 +211,15 @@ def _load_consolidated_timestamps() -> set:
 
 
 def _save_consolidated_timestamps(timestamps: set):
-    """Salva set de timestamps consolidados."""
+    """Salva set de timestamps consolidados de forma atômica."""
     try:
+        from core import atomic_json_write
         # Mantém apenas os últimos 500 para não crescer indefinidamente
         ts_list = sorted(timestamps)[-500:]
-        with open(_CONSOLIDATED_TS_FILE, "w", encoding="utf-8") as f:
-            json.dump({"timestamps": ts_list, "updated": datetime.now().isoformat()}, f, ensure_ascii=False)
+        atomic_json_write(
+            _CONSOLIDATED_TS_FILE,
+            {"timestamps": ts_list, "updated": datetime.now().isoformat()},
+        )
     except Exception:
         pass
 
@@ -597,15 +601,12 @@ def _append_to_autobio(entries: list):
         with open(AUTOBIO_FILE, "a", encoding="utf-8") as f:
             for entry in entries:
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-        # Verifica se precisamos truncar — conta linhas sem carregar tudo
-        # (lê arquivo inteiro apenas se potencialmente > 400 linhas)
+        # Lê as últimas 400 linhas via deque — uma única leitura.
+        # Se deque preencheu completamente (len == 400), o arquivo tinha >= 400
+        # linhas e precisa ser truncado; caso contrário, não há nada a fazer.
         with open(AUTOBIO_FILE, "r", encoding="utf-8") as f:
-            # Usa deque para guardar últimas 400 e contar o total eficientemente
             ultimas = list(_deque(f, maxlen=400))
-            # Se chegou no limite, significa que havia >= 400 linhas
-        # Se o arquivo tinha mais de 400 linhas, reescreve atomicamente
-        total_linhas = sum(1 for _ in open(AUTOBIO_FILE, "r", encoding="utf-8"))
-        if total_linhas > 400:
+        if len(ultimas) == 400:
             dir_ = os.path.dirname(AUTOBIO_FILE) or "."
             fd, tmp_path = tempfile.mkstemp(dir=dir_, suffix=".tmp")
             try:

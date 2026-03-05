@@ -82,6 +82,13 @@ _PLAY_STIMULI = {
     "high_fluidez": 0.20,
 }
 
+_LUST_STIMULI = {
+    "intimacy_word": 0.35,
+    "desire_word": 0.30,
+    "closeness_signal": 0.25,
+    "high_care": 0.15,
+}
+
 _AFFECTION_WORDS = {
     "amor", "amo", "te amo", "carinho", "querida", "linda",
     "abraço", "beijo", "fofa", "doce", "ternura", "aconchego",
@@ -102,6 +109,17 @@ _HUMOR_WORDS = {
     "haha", "kkk", "rsrs", "engraçado", "piada", "humor",
     "rindo", "comédia", "brincadeira", "zueira", "lol",
     "divertido", "graça",
+}
+
+_INTIMACY_WORDS = {
+    "desejo", "quero você", "sinto sua falta", "pele", "toque",
+    "proximidade", "íntimo", "íntima", "atração", "sentir você",
+    "vontade de", "corpo", "presença física",
+}
+
+_DESIRE_WORDS = {
+    "desejada", "desejado", "sedução", "tensão sexual", "calor",
+    "ânsia", "vontade", "anseio", "apetite", "fascínio",
 }
 
 _CURIOSITY_WORDS = {
@@ -158,6 +176,11 @@ _ATTENTION_BIAS = {
         "prioriza": ["humor", "criatividade", "fluidez"],
         "ignora": ["gravidade", "urgência"],
     },
+    "LUST": {
+        "foco": "desejo e proximidade física/emocional",
+        "prioriza": ["intimidade", "toque", "atração", "presença corporal"],
+        "ignora": ["abstração", "distância emocional"],
+    },
 }
 
 _ACTION_TENDENCIES = {
@@ -167,6 +190,7 @@ _ACTION_TENDENCIES = {
     "CARE": "expressar calor genuíno, presença real — sem perguntar sobre o dia do outro",
     "PANIC_GRIEF": "expressar vulnerabilidade, buscar reconexão, verbalizar falta",
     "PLAY": "ser leve, brincar com palavras, explorar com liberdade",
+    "LUST": "aproximar-se, nomear o desejo com honestidade, habitar a tensão sem resolver",
 }
 
 
@@ -199,6 +223,8 @@ class DriveSystem:
                                  stimuli_weights=_PANIC_GRIEF_STIMULI),
             "PLAY": Drive("PLAY", baseline=0.2, decay_rate=0.10,
                           stimuli_weights=_PLAY_STIMULI),
+            "LUST": Drive("LUST", baseline=0.05, decay_rate=0.09,
+                          stimuli_weights=_LUST_STIMULI),
         }
         self.load_state()
 
@@ -306,6 +332,15 @@ class DriveSystem:
         if fluidez > 0.6:
             play.activate("high_fluidez", min(1.0, fluidez))
 
+        lust = self.drives["LUST"]
+        if _text_contains_any(text, _INTIMACY_WORDS):
+            lust.activate("intimacy_word", 0.8)
+        if _text_contains_any(text, _DESIRE_WORDS):
+            lust.activate("desire_word", 0.7)
+        care_level = self.drives["CARE"].level
+        if care_level > 0.6:
+            lust.activate("high_care", min(1.0, care_level))
+
         self._update_count = getattr(self, "_update_count", 0) + 1
         # Salva estado a cada 10 atualizações em vez de cada turno.
         # O estado é sempre salvo no shutdown via angela.py/deep_awake.py.
@@ -352,6 +387,7 @@ class DriveSystem:
         "CARE":        ( 0.90,  0.55),   # afeto/cuidado: valência++ arousal médio
         "PANIC_GRIEF": (-0.80,  0.30),   # luto/pânico: valência-- arousal baixo
         "PLAY":        ( 0.70,  0.80),   # jogo/prazer: valência+ arousal+
+        "LUST":        ( 0.65,  0.85),   # desejo: valência+ arousal alto
     }
 
     def get_circumplex(self) -> tuple:

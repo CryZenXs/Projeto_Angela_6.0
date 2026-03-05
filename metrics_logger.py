@@ -4,13 +4,19 @@
 
 import os
 import json
+import tempfile
+from collections import deque
 from datetime import datetime, timezone
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
+_LOG_MAX_LINES = 5000   # cap do arquivo; mantém as últimas N linhas
+
 
 def log_event(event_type: str, payload: dict, log_file: str = "emergence.log"):
-    """Registra um evento no log JSONL. Falha silenciosamente."""
+    """Registra um evento no log JSONL. Falha silenciosamente.
+    Trunca o arquivo para _LOG_MAX_LINES quando ultrapassa esse limite.
+    """
     try:
         entry = {
             "ts": datetime.now(timezone.utc).isoformat(),
@@ -20,6 +26,26 @@ def log_event(event_type: str, payload: dict, log_file: str = "emergence.log"):
         path = os.path.join(BASE_PATH, log_file)
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+        # Truncagem atômica: lê as últimas _LOG_MAX_LINES linhas via deque,
+        # e se o arquivo estava maior, reescreve apenas essas.
+        with open(path, "r", encoding="utf-8") as f:
+            ultimas = list(deque(f, maxlen=_LOG_MAX_LINES))
+        # deque só descarta linhas se havia mais que maxlen — usa o fato de
+        # que len(ultimas) == _LOG_MAX_LINES implica que o arquivo tinha mais.
+        # Para confirmar sem abrir uma terceira vez, estimamos pelo tamanho:
+        if len(ultimas) == _LOG_MAX_LINES:
+            dir_ = os.path.dirname(path) or "."
+            fd, tmp = tempfile.mkstemp(dir=dir_, suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    f.writelines(ultimas)
+                os.replace(tmp, path)
+            except Exception:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
     except Exception:
         pass
 

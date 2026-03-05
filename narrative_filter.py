@@ -134,6 +134,7 @@ class NarrativeFilter:
             seeking_level = float(drives.get("SEEKING", 0.0))
             rage_level = float(drives.get("RAGE", 0.0))
             care_level = float(drives.get("CARE", 0.0))
+            lust_level = float(drives.get("LUST", 0.0))
 
             # FEAR alto → mais restritivo (bloqueia mais fácil)
             if fear_level > 0.5:
@@ -163,6 +164,12 @@ class NarrativeFilter:
             if care_level > 0.5:
                 delay_seconds = max(30, int(delay_seconds - care_level * 30))
                 congestion_fluidez -= care_level * 0.04  # vínculo reduz limiar de congestão
+
+            # LUST alto → mais permissivo (desejo de aproximação fluidifica expressão)
+            if lust_level > 0.4:
+                activation_threshold += lust_level * 0.08
+                congestion_fluidez -= lust_level * 0.04
+                delay_seconds = max(30, int(delay_seconds - lust_level * 25))
 
             # Clamps de segurança
             activation_threshold = max(0.50, min(0.90, activation_threshold))

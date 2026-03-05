@@ -26,6 +26,7 @@ _BASELINE_LIMITS = {
     "CARE":        (0.20, 0.60),
     "PANIC_GRIEF": (0.05, 0.30),
     "PLAY":        (0.10, 0.45),
+    "LUST":        (0.02, 0.30),
 }
 
 _WINDOW = 20
@@ -294,7 +295,7 @@ class SelfEvolution:
                             integration, hot_state, friction_metrics,
                             emocao, interaction_count):
         try:
-            pos = drives.get("SEEKING",0)*0.3 + drives.get("CARE",0)*0.4 + drives.get("PLAY",0)*0.3
+            pos = drives.get("SEEKING",0)*0.3 + drives.get("CARE",0)*0.4 + drives.get("PLAY",0)*0.2 + drives.get("LUST",0)*0.1
             neg = drives.get("RAGE",0)*0.4 + drives.get("FEAR",0)*0.3 + drives.get("PANIC_GRIEF",0)*0.3
             valence = round(float(pos - neg), 3)
         except Exception:

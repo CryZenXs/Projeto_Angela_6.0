@@ -1125,9 +1125,3 @@ class MemoryIndex:
         )
         self._conn.commit()
 
-    def close(self):
-        """Close the database connection."""
-        try:
-            self._conn.close()
-        except Exception:
-            pass

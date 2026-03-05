@@ -363,6 +363,7 @@ def analisar_emocao_semantica(texto, drives=None, corpo_state=None):
         "CARE":         "amor",
         "PANIC_GRIEF":  "tristeza",
         "PLAY":         "alegria",
+        "LUST":         "desejo",
     }
     
     # --- Palavras de mascaramento (indicam educação ao expressar emoção negativa) ---

@@ -77,6 +77,7 @@ _PANKSEPP_TO_SEMANTIC = {
     "PANIC_GRIEF":  "sobrevivencia",
     "RAGE":         "raiva",
     "PLAY":         "leveza",
+    "LUST":         "desejo",
 }
 
 

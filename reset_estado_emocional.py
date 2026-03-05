@@ -47,6 +47,7 @@ def reset_drives():
             "CARE":        {"level": 0.30, "baseline": 0.30},
             "PANIC_GRIEF": {"level": 0.10, "baseline": 0.10},
             "PLAY":        {"level": 0.20, "baseline": 0.20},
+            "LUST":        {"level": 0.05, "baseline": 0.05},
         }
     }
     atomic_write(path, data)

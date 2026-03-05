@@ -90,7 +90,7 @@ def gerar_reflexao_temporal_template(tempo_humanizado, emocao_anterior, emocao_a
     
     return random.choice(reflexoes)
 
-def gerar_reflexao_temporal(estado_atual, memorias_passadas):
+def gerar_reflexao_temporal(estado_atual, memorias_passadas, coherence_load=0.0):
     """
     Gera reflexão temporal comparando estado atual com memórias recentes.
     
@@ -100,6 +100,7 @@ def gerar_reflexao_temporal(estado_atual, memorias_passadas):
     Args:
         estado_atual: dict com {"emocao": str, "timestamp": str}
         memorias_passadas: lista de dicts das últimas memórias
+        coherence_load: float [0, 1] — carga cognitiva atual, afeta dilatação temporal
     
     Returns:
         str: Reflexão temporal em primeira pessoa
@@ -120,7 +121,7 @@ def gerar_reflexao_temporal(estado_atual, memorias_passadas):
     
     # Calcula tempo decorrido
     tempo_passado_real = calcular_delta_tempo(ultima_memoria["ts"])
-    tempo_passado = aplicar_dilatacao_temporal(tempo_passado_real)
+    tempo_passado = aplicar_dilatacao_temporal(tempo_passado_real, coherence_load=coherence_load)
     tempo_humanizado = humanizar_tempo(tempo_passado)
 
     # Extrai emoção anterior

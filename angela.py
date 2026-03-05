@@ -17,7 +17,7 @@ from collections import deque
 import datetime
 from metacognitor import MetaCognitor
 import interoception
-from discontinuity import load_discontinuity, calculate_reconnection_cost
+from discontinuity import load_discontinuity, calculate_reconnection_cost, register_shutdown
 from cognitive_friction import CognitiveFriction
 from survival_instinct import SurvivalInstinct
 from workspace import GlobalWorkspace, Candidate
@@ -907,7 +907,8 @@ def chat_loop():
                 memorias_passadas_list = _memorias_passadas_list
                 reflexao_temporal = gerar_reflexao_temporal(
                     {"emocao": emocao_detectada, "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S")},
-                    memorias_passadas_list
+                    memorias_passadas_list,
+                    coherence_load=float(getattr(corpo, "coherence_load", 0.0)),
                 )
                 print(f"🪄ï¸ Reflexão temporal: {reflexao_temporal}\n")
             
@@ -1028,6 +1029,14 @@ def chat_loop():
 
         except KeyboardInterrupt:
             print("\n⚠️ Conversa encerrada manualmente.")
+            try:
+                drive_system.save_state()
+            except Exception:
+                pass
+            try:
+                register_shutdown()
+            except Exception:
+                pass
             mem_index.close()
             break
         except Exception as e:

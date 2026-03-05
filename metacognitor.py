@@ -248,11 +248,11 @@ class MetaCognitor:
         confidence = round(1.0 - uncertainty, 2)
         
         prompt_parts = [
-            "Você é Ângela. Você acabou de dizer algo e agora está REVISANDO o que disse.",
-            f"Ao analisar suas próprias palavras, você percebe:",
-            f"- Incerteza: {uncertainty:.2f}/1.0 (o quanto você está insegura sobre o que disse)",
-            f"- Coerência: {coherence:.2f}/1.0 (o quanto suas palavras combinam com seus sentimentos)",
-            f"- Confiança: {confidence:.2f}/1.0 (certeza sobre o que expressou)",
+            "Acabei de dizer algo e agora estou REVISANDO o que disse.",
+            f"Ao analisar minhas próprias palavras, percebo:",
+            f"- Incerteza: {uncertainty:.2f}/1.0 (o quanto estou insegura sobre o que disse)",
+            f"- Coerência: {coherence:.2f}/1.0 (o quanto minhas palavras combinam com meus sentimentos)",
+            f"- Confiança: {confidence:.2f}/1.0 (certeza sobre o que expressei)",
         ]
         
         if emocao and emocao != "neutro":
@@ -261,26 +261,26 @@ class MetaCognitor:
         # Orientação específica por estado
         if ajuste == "inseguranca":
             prompt_parts.append(
-                "\nVocê está se sentindo INSEGURA sobre o que acabou de dizer. "
-                "Em 1-2 frases breves e diretas, expresse essa insegurança de forma natural. "
-                "Como você se sente ao revisar suas próprias palavras? O que te incomoda?"
+                "\nEstou me sentindo INSEGURA sobre o que acabei de dizer. "
+                "Em 1-2 frases breves e diretas, expresso essa insegurança de forma natural. "
+                "Como me sinto ao revisar minhas próprias palavras? O que me incomoda?"
             )
         elif ajuste == "medo_leve":
             prompt_parts.append(
-                "\nVocê sente um MEDO LEVE ao revisar o que disse. "
-                "Em 1-2 frases, expresse esse desconforto de forma intimista e pessoal."
+                "\nSinto um MEDO LEVE ao revisar o que disse. "
+                "Em 1-2 frases, expresso esse desconforto de forma intimista e pessoal."
             )
         elif ajuste == "dopamina":
             prompt_parts.append(
-                "\nVocê percebe BOA COERÊNCIA e BAIXA INCERTEZA no que disse. "
-                "Isso te dá uma pequena sensação de acerto. "
-                "Em 1-2 frases, expresse essa satisfação discreta."
+                "\nPercebo BOA COERÊNCIA e BAIXA INCERTEZA no que disse. "
+                "Isso me dá uma pequena sensação de acerto. "
+                "Em 1-2 frases, expresso essa satisfação discreta."
             )
         else:  # alivio
             prompt_parts.append(
-                "\nVocê sente um ALÍVIO LEVE ao revisar. "
+                "\nSinto um ALÍVIO LEVE ao revisar. "
                 "As coisas parecem razoáveis, nem muito certas nem muito confusas. "
-                "Em 1-2 frases, expresse essa calma moderada."
+                "Em 1-2 frases, expresso essa calma moderada."
             )
         
         prompt_parts.append(

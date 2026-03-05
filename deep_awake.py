@@ -951,7 +951,8 @@ def deep_awake_loop(forced_mode=None):
                 pass
             reflexao_temporal = gerar_reflexao_temporal(
                 {"emocao": emocao_detectada, "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")},
-                memorias_passadas
+                memorias_passadas,
+                coherence_load=coherence_load,
             )
             try:
                 if 'reflexao_temporal' in locals():
@@ -1110,14 +1111,14 @@ def deep_awake_loop(forced_mode=None):
 
         # ── Self-evolution: observe() a cada ciclo, evaluate() a cada 5 ──
         try:
-            _reflexao_t = reflexao_temporal if 'reflexao_temporal' in dir() else ""
+            _reflexao_t = reflexao_temporal if 'reflexao_temporal' in locals() else ""
             _valence_t  = corpo.compute_circumplex().valence if hasattr(corpo, 'compute_circumplex') else 0.0
-            _mask_t     = "[MASCARAMENTO]" in (response if 'response' in dir() else "")
+            _mask_t     = "[MASCARAMENTO]" in (resposta if 'resposta' in locals() else "")
             self_evolution.observe(
                 drives=all_drives,
                 emocao=str(emocao_detectada),
                 mascaramento=_mask_t,
-                narrativa_bloqueada=(acao == "SILENCE"),
+                narrativa_bloqueada=(acao_workspace == "SILENCE"),
                 reflexao_temporal=(_reflexao_t or ""),
                 valence=_valence_t,
                 metacog=metacog_state,

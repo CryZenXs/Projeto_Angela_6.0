@@ -296,13 +296,15 @@ class Interoceptor:
         Lê o último autor do angela_memory.jsonl.
         Centralizado aqui para evitar duplicação — chamado NO MÁXIMO uma vez
         por ciclo perceber()/feedback_emocao().
+        Usa deque(maxlen=1) para ler apenas a última linha sem carregar o arquivo inteiro.
         """
         try:
             import json
+            from collections import deque
             with open("angela_memory.jsonl", "r", encoding="utf-8") as f:
-                linhas = [json.loads(l) for l in f if l.strip()]
-            if linhas:
-                ult = linhas[-1]
+                ultima = deque(f, maxlen=1)
+            if ultima:
+                ult = json.loads(ultima[0])
                 if isinstance(ult.get("user"), dict):
                     return ult["user"].get("autor", "desconhecido")
                 return "Vinicius"

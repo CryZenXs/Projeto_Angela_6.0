@@ -2,41 +2,26 @@
 # Calculador offline de métricas de emergência
 # Lê eventos de emergence.log e calcula indicadores agregados
 
-import os
-import json
 import math
-
-BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+from metrics_logger import read_recent as _read_recent_log
 
 
 class EmergenceMetrics:
     """Calcula métricas de emergência a partir do log JSONL."""
 
     def __init__(self, log_file: str = "emergence.log"):
-        self._log_path = os.path.join(BASE_PATH, log_file)
+        self._log_file = log_file
 
     def _read_recent(self, n: int) -> list:
-        """Lê os últimos N eventos do log."""
-        try:
-            if not os.path.exists(self._log_path):
-                return []
-            with open(self._log_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-            events = []
-            for line in lines[-n:]:
-                line = line.strip()
-                if line:
-                    events.append(json.loads(line))
-            return events
-        except Exception:
-            return []
+        """Lê os últimos N eventos do log via metrics_logger."""
+        return _read_recent_log(n=n, log_file=self._log_file)
 
     # ── Homeostasis ──────────────────────────────────────────────
 
     def homeostasis_score(self, window: int = 50) -> float:
         """
         Fração de ticks onde canais corporais estavam dentro dos setpoints.
-        Setpoints padrão: tensao=[0.3, 0.6], fluidez=[0.4, 0.7]
+        Setpoints alinhados com ObjectivePressures: tensao=[0.15, 0.85], fluidez=[0.08, 0.95].
         """
         try:
             events = self._read_recent(window)
@@ -44,8 +29,8 @@ class EmergenceMetrics:
                 return 0.0
 
             setpoints = {
-                "tensao": (0.3, 0.6),
-                "fluidez": (0.4, 0.7),
+                "tensao": (0.15, 0.85),
+                "fluidez": (0.08, 0.95),
             }
             in_range = 0
             total = 0

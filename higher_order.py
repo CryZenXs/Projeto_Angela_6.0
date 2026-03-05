@@ -136,7 +136,7 @@ class HigherOrderMonitor:
             return "estreito"
         if dominant_drive == "FEAR" and tensao > 0.5:
             return "estreito"
-        if fluidez > 0.7 and dominant_drive in ("SEEKING", "PLAY"):
+        if fluidez > 0.7 and dominant_drive in ("SEEKING", "PLAY", "LUST"):
             return "amplo"
         return "moderado"
 
