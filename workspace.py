@@ -307,24 +307,22 @@ class GlobalWorkspace:
         if self.state.integration < 0.3:
             return "SILENCE"
 
-        # Zona ambígua: usar EFE para decidir (Active Inference — Friston 2010)
-        if 0.3 <= self.state.integration <= 0.6:
-            try:
-                from active_inference import select_action_by_efe
-                efe_action, _ = select_action_by_efe(
-                    available_actions=[
-                        "SPEAK", "SILENCE", "ASK_CLARIFY",
-                        "SELF_REGULATE", "REST_REQUEST", "RECALL_MEMORY",
-                    ],
-                    current_state=self.state.corpo_state,
-                    prediction_error=self.state.prediction_error,
-                    drives=self.state.drives,
-                )
-                return efe_action
-            except Exception:
-                pass  # fallback para SPEAK
-
-        return "SPEAK"
+        # Delega a decisão para Inferência Ativa (Friston 2010 - EFE) em vez de retornar SPEAK cegamente.
+        # Isso gera diversidade de ação real (Epistemic Foraging) quando o prediction_error sobe.
+        try:
+            from active_inference import select_action_by_efe
+            efe_action, _ = select_action_by_efe(
+                available_actions=[
+                    "SPEAK", "SILENCE", "ASK_CLARIFY",
+                    "SELF_REGULATE", "REST_REQUEST", "RECALL_MEMORY",
+                ],
+                current_state=self.state.corpo_state,
+                prediction_error=self.state.prediction_error,
+                drives=self.state.drives,
+            )
+            return efe_action
+        except Exception:
+            return "SPEAK"
 
     def get_all_actions(self) -> list:
         """Retorna todas as ações disponíveis (workspace + instrumentais)."""
