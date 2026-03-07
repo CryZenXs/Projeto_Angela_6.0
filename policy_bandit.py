@@ -29,7 +29,8 @@ class PolicyBandit:
 
     def discretize_context(self, corpo_state: dict, damage: float,
                            pred_error: float,
-                           ciclo: str = "vigilia") -> str:
+                           ciclo: str = "vigilia",
+                           drives: dict = None) -> str:
         tensao = corpo_state.get("tensao", 0.0)
         fluidez = corpo_state.get("fluidez", 0.0)
 
@@ -40,6 +41,21 @@ class PolicyBandit:
             "pred_err_high" if pred_error > 0.4 else "pred_err_ok",
             ciclo,
         ]
+
+        if drives:
+            # Aceita tanto {nome: float} (get_all_levels) quanto {nome: {"level": float}}
+            dominant = max(
+                drives.items(),
+                key=lambda kv: kv[1].get("level", 0.0)
+                               if isinstance(kv[1], dict) else float(kv[1]),
+            )
+            dom_name = dominant[0]
+            dom_level = (dominant[1].get("level", 0.0)
+                         if isinstance(dominant[1], dict) else float(dominant[1]))
+            # Só adiciona se o drive dominante tiver ativação relevante (> 0.3)
+            if dom_level > 0.3:
+                parts.append(f"dom_{dom_name}")
+
         return "|".join(parts)
 
     # ── seleção ─────────────────────────────────────────────────

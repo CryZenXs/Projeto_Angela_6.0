@@ -484,6 +484,7 @@ def chat_loop():
                 damage=friction.damage,
                 pred_error=pred_error_pre,
                 ciclo="vigilia",
+                drives=all_drives,
             )
             all_actions = workspace.get_all_actions()
             acao_policy = policy.select_action(policy_context, all_actions)

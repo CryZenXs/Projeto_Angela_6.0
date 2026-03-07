@@ -582,6 +582,7 @@ def deep_awake_loop(forced_mode=None):
             damage=friction.damage,
             pred_error=pred_error_pre,
             ciclo=ciclo,
+            drives=all_drives,
         )
         all_actions = workspace.get_all_actions()
         acao_policy = policy.select_action(policy_context, all_actions)
