@@ -233,27 +233,25 @@ class GlobalWorkspace:
     def compute_integration(self) -> float:
         """
         Calcula proxy de integração (inspirado em IIT Φ).
-
-        Mede acoplamento entre subsistemas computando
-        1 - variância dos sinais normalizados de corpo, drives e meta.
-        Quanto maior o valor, mais unificada a experiência.
+        Mede acoplamento e fragmentação do estado atual.
         """
-        signals = []
+        corpo = self.state.corpo_state
+        drives = self.state.drives or {}
 
-        for v in self.state.corpo_state.values():
-            signals.append(float(v))
+        tensao   = corpo.get("tensao", 0.5)
+        fluidez  = corpo.get("fluidez", 0.5)
+        fear     = drives.get("FEAR", 0.0)
+        rage     = drives.get("RAGE", 0.0)
+        care     = drives.get("CARE", 0.0)
+        seeking  = drives.get("SEEKING", 0.0)
 
-        for v in self.state.drives.values():
-            signals.append(float(v))
+        # Fragmentação: tensão alta + fluidez baixa = sistema desintegrado
+        fragmentacao = tensao * (1.0 - fluidez)
 
-        signals.append(float(self.state.meta.get("incerteza", 0.5)))
-        signals.append(float(self.state.meta.get("coerencia", 0.5)))
+        # Conflito afetivo: drives opostos simultâneos reduzem integração
+        conflito = min(fear, care) + min(rage, seeking)
 
-        if len(signals) < 2:
-            return 0.5
-
-        var = statistics.variance(signals)
-        integration = max(0.0, min(1.0, 1.0 - var))
+        integration = max(0.0, min(1.0, 1.0 - fragmentacao - conflito * 0.3))
         self.state.integration = integration
         return integration
 

@@ -73,8 +73,8 @@ def compute_efe(
     # Termo epistêmico: ações que aumentam fluidez reduzem incerteza
     epistemic_gain = _EPISTEMIC_GAIN.get(action, 0.05)
 
-    # Modular por erro de predição: se surpresa alta, epistêmico vale mais
-    epistemic = -epistemic_gain * (1.0 + prediction_error)
+    # Modular por erro de predição: se surpresa alta, epistêmico ganha mais peso
+    epistemic = -epistemic_gain * (1.0 + prediction_error * 3.0)
 
     # Modificador por drives
     fear    = drives.get("FEAR", 0.0)
