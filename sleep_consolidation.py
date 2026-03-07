@@ -60,11 +60,16 @@ def episodic_consolidation(
     mem_index,
     generate_fn: Optional[Callable],
     friction_damage: float = 0.0,
+    janela_horas: Optional[float] = None,
 ) -> dict:
     """
     Consolida eventos episódicos de alto impacto na autobiografia.
     Complementa nrem_consolidation (estatístico) com memória narrativa específica.
-    
+
+    janela_horas: quando fornecido, sobrescreve _EPISODIC_WINDOW_HORAS para
+    permitir consolidação retroativa de períodos específicos (ex: madrugada de 04/mar).
+    Quando None, usa a janela padrão de 48h.
+
     Retorna: {episodes_created: int, episodes: list}
     """
     result = {"episodes_created": 0, "episodes": []}
@@ -76,7 +81,7 @@ def episodic_consolidation(
         ja_consolidados = _load_consolidated_timestamps()
 
         # Busca memórias de diálogo real de alta intensidade na janela recente
-        candidatos = _buscar_episodios_candidatos(mem_index)
+        candidatos = _buscar_episodios_candidatos(mem_index, janela_horas=janela_horas)
         if not candidatos:
             return result
 
@@ -109,18 +114,23 @@ def episodic_consolidation(
     return result
 
 
-def _buscar_episodios_candidatos(mem_index) -> list:
+def _buscar_episodios_candidatos(mem_index, janela_horas: Optional[float] = None) -> list:
     """
     Busca memórias de diálogo real com:
     - tipo = "dialogo" (não ciclos autônomos)
     - intensidade >= threshold
-    - dentro da janela de 48h
+    - dentro da janela configurada (padrão: _EPISODIC_WINDOW_HORAS = 48h)
+
+    janela_horas: quando fornecido, substitui _EPISODIC_WINDOW_HORAS. Útil para
+    consolidação retroativa de períodos específicos via consolidar_periodo.py.
+
     Ordena por intensidade descendente.
     """
     candidatos = []
     try:
         from datetime import timedelta
-        janela_inicio = (datetime.now() - timedelta(hours=_EPISODIC_WINDOW_HORAS)).isoformat()
+        horas_efetivas = janela_horas if janela_horas is not None else _EPISODIC_WINDOW_HORAS
+        janela_inicio = (datetime.now() - timedelta(hours=horas_efetivas)).isoformat()
 
         rows = mem_index._conn.execute(
             "SELECT id, ts, conteudo, resposta, emocao, intensidade, tipo "

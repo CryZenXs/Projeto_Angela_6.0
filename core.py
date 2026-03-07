@@ -269,7 +269,7 @@ def sanitizar_output_llm(texto: str, contexto: str = "") -> str:
     return texto
 
 
-def append_memory(user_input, angela_output, corpo=None, reflexao=None):
+def append_memory(user_input, angela_output, corpo=None, reflexao=None, extra=None):
     def sanitize(text):
         if isinstance(text, str):
             return text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "").strip()
@@ -332,6 +332,10 @@ def append_memory(user_input, angela_output, corpo=None, reflexao=None):
             record["estado_interno"] = json.loads(corpo.exportar_estado())
         except Exception:
             record["estado_interno"] = {}
+
+    # Campos extras opcionais (ex: origem="formula_gap" para descontinuidade)
+    if extra and isinstance(extra, dict):
+        record.update(extra)
 
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")

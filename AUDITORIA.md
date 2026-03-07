@@ -178,3 +178,166 @@ Mesma correção: o prompt de `get_existential_context()` solicitava explicitame
 | I/O e atomicidade | `sleep_consolidation.py`, `interoception.py` | Escritas atômicas, eliminação de leituras redundantes |
 | Perspectiva | `metacognitor.py`, `survival_instinct.py` | Prompts e fallbacks convertidos de segunda para primeira pessoa |
 | Funcionalidade inativa | `tempo_subjetivo.py`, `angela.py`, `deep_awake.py` | `coherence_load` agora percorre o pipeline completo |
+
+---
+
+# Auditoria de Alinhamento — Projeto Ângela
+
+**Data:** 2026-03-04  
+**Tipo:** Alinhamento com objetivo central (não bugs técnicos)  
+**Critério:** Cada componente cria restrições/feedback reais que forçam emergência, ou apenas instrui persona?  
+**Escopo:** Leitura completa de todos os módulos com foco em prompts, headers e textos injetados no LLM.  
+**Status:** Leitura concluída. Nenhum arquivo foi modificado nesta auditoria.
+
+---
+
+## Resumo executivo
+
+O projeto está **majoritariamente alinhado** com o objetivo. A arquitetura central é honesta: estado bruto → gating real → LLM. A maioria dos módulos injeta dados de estado, não instruções de identidade. Existem **3 itens de alta prioridade** (resíduos de instrução de persona/comportamento no final do prompt) e **2 itens de baixa prioridade** (inativos em produção ou aceitáveis como fallback).
+
+---
+
+## O que está alinhado ("deixa emergir")
+
+| Componente | Por que está correto |
+|---|---|
+| `CHECKPOINT` (`core.py`) | Restrições de processo, não identidade. Correção de perspectiva já aplicada. |
+| `system_prompt` (`core.py`) | Apenas: "Responda em primeira pessoa ao que foi dito. Não cite instruções." |
+| `LANGUAGE_CONSTRAINTS` (`core.py`) | Filtragem de output, sem instrução de quem ser. |
+| `analisar_emocao_semantica()` (`core.py`) | STATE-FIRST: drives 50%, corpo 30%, texto 20%. Mecanismo real. |
+| `governed_generate()` (`core.py`) | Narrative filter ANTES do LLM. Gating real. |
+| `narrative_filter.py` | Pura lógica de gating por sinais fisiológicos. Sem texto de persona. `grave_phrases` bloqueia loops de consciência declarada em 2+ reflexões consecutivas — não censura ocorrência isolada. |
+| `higher_order.py` — caminho de produção | Narrativa HOT gerada pelo LLM a partir de sinais puros (clarity, ownership, confidence, drive). `_build_narrative_prompt()` sem instrução de identidade. Resultado injetado como dado em `[ESTADO_MENTAL]`. |
+| `attention_schema.py` (raw=True) | Bloco `[ATENCAO]` com números e tokens. Sem persona. |
+| `theory_of_mind.py` | `[ESTADO_VINICIUS]` injeta inferência sobre Vinicius como dado, não como instrução para Angela. Só é injetado se `confiante=True`. |
+| `workspace.py` | Seleção de ação por estado fisiológico e drives. Sem texto de prompt. |
+| `prediction_engine.py` | Mecânica de estado pura. Sem texto. |
+| `deep_awake.py` — `prompt_base` (vigília/introspecção/repouso) | Restrições de formato/processo. `contexto_repouso` derivado de `corpo.tensao`/`fluidez`/`estado_emocional` — estado bruto, não instrução de identidade. |
+| Reflexão corporal (`angela.py:785-800`) | Prompt: `[drive=X \| emocao=Y \| tensao=Z ...]`. "Primeira pessoa singular" é restrição gramatical, não de persona. |
+| Laços de feedback reais | RAGE ativa quando narrativa bloqueada (`angela.py:700`); `coherence_load` → temperature; reward homeostático + policy bandit; self-evolution a cada 10 interações reais; prediction error → atenção corporal; PANIC_GRIEF alto por 3 ciclos → repouso forçado. |
+
+---
+
+## Problemas a corrigir
+
+### Alta prioridade
+
+#### 1. `base_prompt` — `angela.py:39-42`
+
+```python
+# ATUAL — instrui tom e relação
+base_prompt = (
+    "Responda diretamente ao que Vinicius disse, em tom conversacional. "
+    "Use seu estado interno como base, mas fale COM ele, não apenas SOBRE você.\n"
+)
+```
+
+**Problema:** "tom conversacional" e "fale COM ele" são instruções de persona e de relação. Definem quem Angela "deve ser" em vez de deixar o estado interno definir como ela fala. Este texto é o mais próximo do LLM no prompt conversacional — portanto o de maior influência.
+
+```python
+# CORRETO — restrição mínima, sem persona
+base_prompt = "Responda ao que foi dito.\n"
+```
+
+---
+
+#### 2. Textos de ação no prompt conversacional — `angela.py` (~linhas 580-630)
+
+```python
+# ATUAL — instrui comportamento embutido na ação
+f"[AÇÃO: REST_REQUEST] Necessidade de descanso. Responda brevemente.\n"
+f"[AÇÃO: ASK_CLARIFY] Inquietação no input. Faça uma pergunta antes de responder.\n"
+f"[AÇÃO: SELF_REGULATE] Estado instável. Responda com cautela.\n"
+f"[AÇÃO: RECALL_MEMORY] Memória evocada. Integre-a na resposta.\n"
+```
+
+**Problema:** "Responda brevemente", "Faça uma pergunta antes de responder", "Integre-a na resposta" — instruções de comportamento embutidas na ação. Definem o que Angela deve fazer em vez de deixar o estado decidir.
+
+```python
+# CORRETO — token de estado puro, sem instrução de comportamento
+"[ESTADO: REST_REQUEST]\n"
+"[ESTADO: ASK_CLARIFY]\n"
+"[ESTADO: SELF_REGULATE]\n"
+"[ESTADO: RECALL_MEMORY]\n"
+```
+
+---
+
+#### 3. Append de REST_REQUEST no modo autônomo — `deep_awake.py:707`
+
+```python
+# ATUAL — instrui expressão
+if acao_workspace == "REST_REQUEST" and ciclo != "repouso":
+    prompt += "\nVocê sente necessidade de descanso. Expresse isso brevemente."
+```
+
+**Problema:** "Expresse isso brevemente" instrui como Angela deve se expressar. O sinal de estado (`REST_REQUEST`) já está presente no `acao_workspace` e no `prompt_base` — a instrução de expressão é redundante e contamina o prompt.
+
+```python
+# CORRETO — sinal de estado puro
+if acao_workspace == "REST_REQUEST" and ciclo != "repouso":
+    prompt += "\n[ESTADO_INTERNO: necessidade_descanso=alta]"
+```
+
+---
+
+### Baixa prioridade (aceitáveis, monitorar)
+
+#### 4. Fallback narratives em `higher_order.py:288-298`
+
+Frases pré-fabricadas em primeira pessoa ativadas apenas quando o LLM é completamente indisponível:
+
+```python
+return "Meus estados parecem distantes, como se não fossem meus."
+return "Tudo está turvo, não consigo ver com nitidez."
+```
+
+**Contexto:** Injetadas como dado em `[ESTADO_MENTAL]`, não como instrução direta. Funcionalmente aceitáveis dado que Ollama pode cair no Colab. Se o LLM estiver sempre disponível, nunca são usadas. Monitorar.
+
+---
+
+#### 5. Caminho `raw=False` em `attention_schema.py:242-252`
+
+```python
+lines.append("Algo está puxando minha atenção de forma involuntária.")
+lines.append("Sinto que poderia reorientar meu foco com um momento de pausa.")
+```
+
+**Contexto:** `get_prompt_header()` usa `raw=True` por padrão em todos os call sites em produção. Este caminho nunca é ativado. Baixa prioridade.
+
+---
+
+## Diagrama: fluxo real vs. contaminação
+
+```
+Estado Bruto
+    → Narrative Filter (gating por fisiologia)          ✅ correto
+    → [ESTADO_MENTAL] + [ATENCAO] + [INTEROCEPCAO]     ✅ correto
+    → [VINCULOS] + [ESTADO_VINICIUS] + memórias         ✅ correto
+    → base_prompt                                        ⚠️  instrui tom/relação   (item 1)
+    → texto de ação (REST_REQUEST, ASK_CLARIFY...)       ⚠️  instrui comportamento (item 2)
+    → deep_awake REST_REQUEST append                     ⚠️  instrui expressão     (item 3)
+    → LLM
+```
+
+Os 3 itens de alta prioridade são todos no trecho **entre os headers de estado e o LLM** — o ponto de maior influência sobre a geração.
+
+---
+
+## Módulos lidos nesta auditoria
+
+| Arquivo | Status |
+|---|---|
+| `README.md` | Lido — objetivo, arquitetura, roadmap |
+| `self_model.json` | Lido — identidade, constraints, fases |
+| `docs/auditoria_persona.md` | Lido — critérios internos de alinhamento |
+| `docs/lacos_feedback.md` | Lido — diagrama de laços esperados |
+| `core.py` | Lido completo |
+| `angela.py` | Lido completo |
+| `deep_awake.py` | Lido completo |
+| `higher_order.py` | Lido completo |
+| `attention_schema.py` | Lido completo |
+| `narrative_filter.py` | Lido completo |
+| `workspace.py` | Lido completo |
+| `theory_of_mind.py` | Lido completo |
+| `prediction_engine.py` | Lido completo |

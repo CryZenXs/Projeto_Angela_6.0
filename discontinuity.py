@@ -238,10 +238,12 @@ def calculate_reconnection_cost(gap_seconds: float) -> dict:
     )
 
     return {
-        "fluidez": -round(fluidez_loss, 4),
-        "tensao":   round(tensao_gain,  4),
-        "impact":  impact,
-        "description": description,
+        "fluidez":      -round(fluidez_loss, 4),
+        "tensao":        round(tensao_gain,  4),
+        "impact":        impact,
+        "description":   description,
+        "gap_injected":  True,
+        "gap_hours":     round(hours, 2),
     }
 
 

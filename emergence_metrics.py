@@ -21,7 +21,9 @@ class EmergenceMetrics:
     def homeostasis_score(self, window: int = 50) -> float:
         """
         Fração de ticks onde canais corporais estavam dentro dos setpoints.
-        Setpoints alinhados com ObjectivePressures: tensao=[0.15, 0.85], fluidez=[0.08, 0.95].
+        Setpoints intermediários: alinhados com ObjectivePressures como referência,
+        mas com janela mais restrita para preservar poder diagnóstico.
+        tensao=[0.20, 0.70], fluidez=[0.15, 0.85].
         """
         try:
             events = self._read_recent(window)
@@ -29,8 +31,8 @@ class EmergenceMetrics:
                 return 0.0
 
             setpoints = {
-                "tensao": (0.15, 0.85),
-                "fluidez": (0.08, 0.95),
+                "tensao": (0.20, 0.70),
+                "fluidez": (0.15, 0.85),
             }
             in_range = 0
             total = 0

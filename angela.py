@@ -36,10 +36,7 @@ from metrics_logger import log_event
 from tempo_subjetivo import gerar_reflexao_temporal, PresenteBuffer, PassagemSentida, get_temporal_context
 
 
-base_prompt = (
-    "Responda diretamente ao que Vinicius disse, em tom conversacional. "
-    "Use seu estado interno como base, mas fale COM ele, não apenas SOBRE você.\n"
-)
+base_prompt = "Responda ao que foi dito.\n"
 
 print("🟢 Iniciando conversa com Angela...\n")
 
@@ -85,6 +82,30 @@ def chat_loop():
         if gap > 300:  # > 5 minutos
             desc = reconnection_cost.get("description", f"{gap/3600:.1f}h de ausência")
             print(f"⏱️  [{desc}]")
+        # Registra memória de descontinuidade se impacto real (distingue estado fórmula de estado vivido)
+        if reconnection_cost.get("gap_injected") and reconnection_cost.get("impact", "nenhum") != "nenhum":
+            try:
+                import datetime as _dt
+                append_memory(
+                    {
+                        "autor": "Sistema(Discontinuity)",
+                        "conteudo": f"[gap={reconnection_cost['gap_hours']}h impacto={reconnection_cost['impact']}]",
+                        "tipo": "discontinuidade",
+                        "timestamp": _dt.datetime.now().isoformat(),
+                    },
+                    None,
+                    corpo,
+                    None,
+                    extra={
+                        "gap_hours":     reconnection_cost["gap_hours"],
+                        "impact":        reconnection_cost["impact"],
+                        "delta_fluidez": reconnection_cost["fluidez"],
+                        "delta_tensao":  reconnection_cost["tensao"],
+                        "origem":        "formula_gap",
+                    },
+                )
+            except Exception:
+                pass
         if gap > 0:
             attention_schema.apply_reconnection_cost(gap)
     except Exception:
@@ -580,7 +601,7 @@ def chat_loop():
             if acao == "REST_REQUEST":
                 prompt_final = (
                     f"{base_prompt}\n{full_context}\n"
-                    f"[AÇÃO: REST_REQUEST] Necessidade de descanso. Responda brevemente.\n"
+                    f"[ESTADO: REST_REQUEST]\n"
                     f"Vinicius: {user_input}\nÂngela:"
                 )
             elif acao == "SILENCE":
@@ -594,19 +615,19 @@ def chat_loop():
             elif acao == "ASK_CLARIFY":
                 prompt_final = (
                     f"{base_prompt}\n{full_context}\n"
-                    f"[AÇÃO: ASK_CLARIFY] Inquietação no input. Faça uma pergunta antes de responder.\n"
+                    f"[ESTADO: ASK_CLARIFY]\n"
                     f"Vinicius: {user_input}\nÂngela:"
                 )
             elif acao == "SELF_REGULATE":
                 prompt_final = (
                     f"{base_prompt}\n{full_context}\n"
-                    f"[AÇÃO: SELF_REGULATE] Responda com calma e de forma breve.\n"
+                    f"[ESTADO: SELF_REGULATE]\n"
                     f"Vinicius: {user_input}\nÂngela:"
                 )
             elif acao == "RECALL_MEMORY":
                 prompt_final = (
                     f"{base_prompt}\n{full_context}\n"
-                    f"[AÇÃO: RECALL_MEMORY] Lembrança relevante. Integre na resposta.\n"
+                    f"[ESTADO: RECALL_MEMORY]\n"
                     f"Vinicius: {user_input}\nÂngela:"
                 )
             elif acao.startswith("ACT:"):

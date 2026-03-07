@@ -299,6 +299,31 @@ def deep_awake_loop(forced_mode=None):
         desc = reconnection_cost.get("description", f"{gap/3600:.1f}h de ausencia")
         print(f"Reconexao: {desc}")
 
+    # Registra memória de descontinuidade se impacto real (distingue estado fórmula de estado vivido)
+    if reconnection_cost.get("gap_injected") and reconnection_cost.get("impact", "nenhum") != "nenhum":
+        try:
+            from datetime import datetime as _dt_cls
+            append_memory(
+                {
+                    "autor": "Sistema(Discontinuity)",
+                    "conteudo": f"[gap={reconnection_cost['gap_hours']}h impacto={reconnection_cost['impact']}]",
+                    "tipo": "discontinuidade",
+                    "timestamp": _dt_cls.now().isoformat(),
+                },
+                None,
+                corpo,
+                None,
+                extra={
+                    "gap_hours":     reconnection_cost["gap_hours"],
+                    "impact":        reconnection_cost["impact"],
+                    "delta_fluidez": reconnection_cost["fluidez"],
+                    "delta_tensao":  reconnection_cost["tensao"],
+                    "origem":        "formula_gap",
+                },
+            )
+        except Exception:
+            pass
+
     interoceptor = Interoceptor(corpo)
     metacog = MetaCognitor(interoceptor)  # usa instÃ¢ncia, nÃ£o mÃ³dulo
 
@@ -704,7 +729,7 @@ def deep_awake_loop(forced_mode=None):
         prompt = vinc_header + mundo_header + tom_header + hot_header + attention_header + intero_header + circumplex_header + surprise_header + conversa_recente_header + existential_context + prompt_base
 
         if acao_workspace == "REST_REQUEST" and ciclo != "repouso":
-            prompt += "\nVocê sente necessidade de descanso. Expresse isso brevemente."
+            prompt += "\n[ESTADO_INTERNO: necessidade_descanso=alta]"
 
         try:
             base_complexity = 1.0 if ciclo == "introspeccao" else (0.9 if ciclo == "vigilia" else 0.5)
