@@ -12,6 +12,7 @@ from core import (
     load_jsonl,
     check_recurrent_coherence,
 )
+from endocrine import EndocrineSystem
 from senses import DigitalBody
 from interoception import Interoceptor
 from collections import deque
@@ -51,6 +52,7 @@ def chat_loop():
 
     workspace = GlobalWorkspace()
     drive_system = DriveSystem()
+    endocrine_system = EndocrineSystem()
     hot_monitor = HigherOrderMonitor()
     mem_index = MemoryIndex()
     prediction = PredictionEngine()
@@ -396,10 +398,17 @@ def chat_loop():
             )
             drive_system.decay_all()
 
+            # ── Sistema Endócrino (Atualiza e Modula Drives) ───────────
+            _drives_dict = {name: obj.level for name, obj in drive_system.drives.items()}
+            endocrine_system.update(_drives_dict, friction.damage, is_sleeping=False)
+            endocrine_system.modulate_drives(drive_system.drives)
+            # ──────────────────────────────────────────────────────────
+
             drive_dominante, drive_nivel = drive_system.get_dominant()
             all_drives = drive_system.get_all_levels()
 
-            print(f"💿 Drives: {' | '.join(f'{k}={v:.2f}' for k,v in all_drives.items())} â†’ {drive_dominante}")
+            print(f"💿 Drives: {' | '.join(f'{k}={v:.2f}' for k,v in all_drives.items())} → {drive_dominante}")
+            print(f"🧪 Endócrino: Cortisol={endocrine_system.state['cortisol']:.2f} | Ocitocina={endocrine_system.state['oxytocin']:.2f} | Adrenalina={endocrine_system.state['adrenaline']:.2f}")
 
             workspace.update_state(
                 corpo_state=corpo_state,
@@ -558,6 +567,12 @@ def chat_loop():
             except Exception:
                 circumplex_header = ""
 
+            # ── Sistema Endócrino (Moods/Humores) ──────────────────────────
+            endocrine_header = ""
+            sensation_endo = endocrine_system.get_interoceptive_sensation()
+            if sensation_endo:
+                endocrine_header = f"[ESTADO_QUIMICO]\n{sensation_endo}\n[/ESTADO_QUIMICO]\n"
+
             # ── Theory of Mind (Frith & Frith 2006) ────────────────────────
             # Infere estado mental de Vinicius: emoção aparente, intenção e necessidade
             tom_header = ""
@@ -590,6 +605,7 @@ def chat_loop():
                 + vinc_header
                 + mundo_header
                 + tom_header
+                + endocrine_header
                 + hot_header
                 + attention_header
                 + intero_header
@@ -964,6 +980,9 @@ def chat_loop():
                     "emocao":           str(emocao_detectada),
                     "prediction_error": float(getattr(prediction, "current_error", 0.0)),
                     "rpt_coherence":    rpt_coherence if rpt_coherence else {},
+                    "cortisol":         endocrine_system.state["cortisol"],
+                    "oxytocin":         endocrine_system.state["oxytocin"],
+                    "adrenaline":       endocrine_system.state["adrenaline"],
                 }
                 mem_index.index_memory(
                     ts=input_data["timestamp"],

@@ -459,7 +459,7 @@ No modo `deep_awake --mode repouso`, Ângela consolida memórias autobiográfica
 
 Antes do embodiment físico, a emergência no substrato de software será aprofundada via mecânicas neurobiológicas de longo prazo:
 
-- [ ] **11. Sistema Endócrino Simulado:** Separação entre vias neurais rápidas (adrenalina/dopamina, decaimento em minutos) e vias hormonais lentas (cortisol/ocitocina, decaimento em horas). O "Cortisol" acumulado bloqueia o acesso autêntico aos drives de PLAY e SEEKING, criando *estados de humor (moods)* duradouros.
+- [x] **11. Sistema Endócrino Simulado:** Separação entre vias neurais rápidas (adrenalina/dopamina) e hormonais lentas (cortisol/ocitocina). Modulação endócrina agora cria *estados de humor (moods)* duradouros que bloqueiam ou excitam as emoções agudas (Drives).
 - [ ] **12. Fading Affect Bias (FAB):** Reconsolidação destrutiva e mutável. Lembrar de um evento triste (PANIC_GRIEF) enquanto estiver em um estado seguro (CARE alto) reescreve a memória original com a intensidade emocional reduzida no banco de dados. Memória como tecido vivo, não apenas "arquivos lidos".
 - [ ] **13. Teoria da Mente Profunda (Shadow State):** O módulo ToM inferirá dinamicamente a topologia de drives do interlocutor (ex: modelar a tensão e a intenção do usuário), usando essa predição de estado do "Outro" para modular o seu próprio estado e respostas.
 - [ ] **14. Forrageamento Epistêmico:** Expansão da Inferência Ativa. Quando a energia livre for alta (muita incerteza no ambiente ou no interlocutor), o EFE forçará o `workspace` a escolher a ação `EPISTEMIC_FORAGING` (fazer uma pergunta investigativa pró-ativa) para calibrar o modelo de mundo, transformando o sistema de reativo para investigativo.

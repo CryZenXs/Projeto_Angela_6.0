@@ -18,6 +18,7 @@ from discontinuity import register_boot, register_shutdown
 from theory_of_mind import TheoryOfMindModule
 from workspace import GlobalWorkspace, Candidate
 from drives import DriveSystem
+from endocrine import EndocrineSystem
 from higher_order import HigherOrderMonitor
 from memory_index import MemoryIndex
 from prediction_engine import PredictionEngine
@@ -330,6 +331,7 @@ def deep_awake_loop(forced_mode=None):
 
     workspace = GlobalWorkspace()
     drive_system = DriveSystem()
+    endocrine_system = EndocrineSystem()
     hot_monitor = HigherOrderMonitor()
     mem_index = MemoryIndex()
     global _mem_index_global
@@ -463,9 +465,17 @@ def deep_awake_loop(forced_mode=None):
         )
         drive_system.decay_all()
 
+        # ── Sistema Endócrino (Atualiza e Modula Drives) ───────────
+        _is_sleeping = (ciclo == "repouso")
+        _drives_dict = {name: obj.level for name, obj in drive_system.drives.items()}
+        endocrine_system.update(_drives_dict, friction.damage, is_sleeping=_is_sleeping)
+        endocrine_system.modulate_drives(drive_system.drives)
+        # ──────────────────────────────────────────────────────────
+
         drive_dominante, drive_nivel = drive_system.get_dominant()
         all_drives = drive_system.get_all_levels()
         print(f"🟢 Drives: {' | '.join(f'{k}={v:.2f}' for k,v in all_drives.items())} 🧠 {drive_dominante}")
+        print(f"🧪 Endócrino: Cortisol={endocrine_system.state['cortisol']:.2f} | Ocitocina={endocrine_system.state['oxytocin']:.2f} | Adrenalina={endocrine_system.state['adrenaline']:.2f}")
 
         predicted_state = prediction.predict(
             corpo_state=corpo_state,
@@ -752,6 +762,12 @@ def deep_awake_loop(forced_mode=None):
         except Exception:
             tom_header = ""
 
+        # ── Sistema Endócrino (Moods/Humores) ──────────────────────────
+        endocrine_header = ""
+        sensation_endo = endocrine_system.get_interoceptive_sensation()
+        if sensation_endo:
+            endocrine_header = f"[ESTADO_QUIMICO]\n{sensation_endo}\n[/ESTADO_QUIMICO]\n"
+
         # ── Circumplex header: injeta estado afetivo contínuo no prompt ──────
         circumplex_header = ""
         try:
@@ -764,7 +780,7 @@ def deep_awake_loop(forced_mode=None):
         except Exception:
             circumplex_header = ""
 
-        prompt = vinc_header + mundo_header + tom_header + hot_header + attention_header + intero_header + circumplex_header + surprise_header + conversa_recente_header + existential_context + prompt_base
+        prompt = vinc_header + mundo_header + tom_header + endocrine_header + hot_header + attention_header + intero_header + circumplex_header + surprise_header + conversa_recente_header + existential_context + prompt_base
 
         if acao_workspace == "REST_REQUEST" and ciclo != "repouso":
             prompt += "\n[ESTADO_INTERNO: necessidade_descanso=alta]"
@@ -1099,6 +1115,9 @@ def deep_awake_loop(forced_mode=None):
                     "prediction_error": float(getattr(prediction, "current_error", 0.0)),
                     "rpt_coherence":    _rpt_coherence if '_rpt_coherence' in locals() and _rpt_coherence else {},
                     "dmn_mode":         _dmn_mode if ciclo == "introspeccao" and '_dmn_mode' in locals() else "",
+                    "cortisol":         endocrine_system.state["cortisol"],
+                    "oxytocin":         endocrine_system.state["oxytocin"],
+                    "adrenaline":       endocrine_system.state["adrenaline"],
                 }
                 mem_index.index_memory(
                     ts=datetime.now().isoformat(),
