@@ -163,9 +163,9 @@ class ActionManager:
 
     def _action_memory_consolidate(self, params: dict) -> ActionResult:
         """Dispara uma passagem de consolidação de memória."""
+        from memory_index import MemoryIndex
+        mem = MemoryIndex()
         try:
-            from memory_index import MemoryIndex
-            mem = MemoryIndex()
             result = mem.consolidate_for_sleep()
             n_patterns = len(result.get("patterns", []))
             return ActionResult(
@@ -178,6 +178,11 @@ class ActionManager:
             )
         except Exception as e:
             return ActionResult(ok=False, observation={}, cost=0.0, error=str(e))
+        finally:
+            try:
+                mem.close()
+            except Exception:
+                pass
 
     def _action_request_sleep(self, params: dict) -> ActionResult:
         """Sinaliza que o sistema deseja transicionar para repouso."""

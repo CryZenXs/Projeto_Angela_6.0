@@ -10,6 +10,7 @@ from core import (
     analisar_emocao_semantica,
     governed_generate,
     load_jsonl,
+    check_recurrent_coherence,
 )
 from senses import DigitalBody
 from interoception import Interoceptor
@@ -85,13 +86,12 @@ def chat_loop():
         # Registra memória de descontinuidade se impacto real (distingue estado fórmula de estado vivido)
         if reconnection_cost.get("gap_injected") and reconnection_cost.get("impact", "nenhum") != "nenhum":
             try:
-                import datetime as _dt
                 append_memory(
                     {
                         "autor": "Sistema(Discontinuity)",
                         "conteudo": f"[gap={reconnection_cost['gap_hours']}h impacto={reconnection_cost['impact']}]",
                         "tipo": "discontinuidade",
-                        "timestamp": _dt.datetime.now().isoformat(),
+                        "timestamp": datetime.datetime.now().isoformat(),
                     },
                     None,
                     corpo,
@@ -707,23 +707,36 @@ def chat_loop():
                 # Imprime label ANTES do streaming para que os tokens apareçam logo após o rótulo
                 print("🗣️ Ângela: ", end="", flush=True)
 
-                response = governed_generate(
-                    prompt_final,
-                    state_snapshot=state_snapshot,
-                    recent_reflections=recent_reflections,
-                    mode="conversacional",
-                    raw_generate_fn=lambda p, modo: generate(p, modo=modo, friction=friction),
-                    drives=all_drives,
-                    prediction_error=getattr(prediction, "current_error", 0.0),
-                    attention_state=attention_state,
-                )
+                import sys, io
+                _old_stdout = sys.stdout
+                sys.stdout = io.StringIO()
+                try:
+                    response = governed_generate(
+                        prompt_final,
+                        state_snapshot=state_snapshot,
+                        recent_reflections=recent_reflections,
+                        mode="conversacional",
+                        raw_generate_fn=lambda p, modo: generate(p, modo=modo, friction=friction),
+                        drives=all_drives,
+                        prediction_error=getattr(prediction, "current_error", 0.0),
+                        attention_state=attention_state,
+                    )
+                finally:
+                    sys.stdout = _old_stdout
+
+                from core import sanitizar_output_llm
+                response = sanitizar_output_llm(response, contexto="chat")
 
                 if not response:
                     response = "..."
-                    # Nada foi streamado (BLOCKED/vazio) → imprime resposta explicitamente
-                    print(response, end="")
-
-                print("\n")  # finaliza linha após streaming
+                    print(response)
+                else:
+                    # Simula streaming da resposta já sanitizada
+                    for char in response:
+                        sys.stdout.write(char)
+                        sys.stdout.flush()
+                        time.sleep(0.01)
+                    print("\n")
 
             try:
                 carga = float(getattr(corpo, "coherence_load", 0.0))
@@ -752,6 +765,21 @@ def chat_loop():
                 pass
 
             emocao_detectada, intensidade = analisar_emocao_semantica(response, drives=all_drives, corpo_state=corpo_state)
+
+            # ── Processamento Recorrente (Lamme 2006) — detecta contradição entre
+            # resposta gerada e estado emocional interno. Não bloqueia. Apenas registra.
+            rpt_coherence = {}
+            try:
+                rpt_coherence = check_recurrent_coherence(
+                    response_text=response,
+                    emocao_atual=str(emocao_detectada),
+                    intensidade=float(intensidade),
+                    drives=all_drives,
+                )
+                if rpt_coherence.get("signal"):
+                    print(f"🔁 RPT: {rpt_coherence['signal']}")
+            except Exception:
+                rpt_coherence = {}
 
             try:
                 if response != "...":  # não acumula dano cognitivo quando Angela está em silêncio
@@ -856,7 +884,7 @@ def chat_loop():
                         with open("afetos.json","r",encoding="utf-8") as f: afetos = json.load(f)
                     except Exception:
                         afetos = {}
-                    v = afetos.get("Vinicius", {"confianca":0.5,"gratidao":0.5,"saudade":0.5,"ansiedade":0.3})
+                    v = afetos.get("Vinicius", {"confianca":0.5,"gratidao":0.5,"saudade":0.0,"ansiedade":0.3})
                     if meta.get("ajuste") == "dopamina":
                         v["confianca"] = min(1.0, v.get("confianca",0.5) + 0.02)
                         v["gratidao"] = min(1.0, v.get("gratidao",0.5) + 0.02)  # chave padronizada sem acento
@@ -891,6 +919,24 @@ def chat_loop():
 
                             print(f"🔄 Reappraisal: {_ni} -> {_ba}")
 
+                            # ── Cognitive Reappraisal — ajuste de baseline (Gross 2015) ────
+                            # Reappraisal bem-sucedido sugere regulação ativa deste drive.
+                            # Reduz baseline levemente — disposição crônica, não apenas estado momentâneo.
+                            try:
+                                _drive_map = {
+                                    "medo": "FEAR", "raiva": "RAGE",
+                                    "ansiedade": "FEAR", "tristeza": "PANIC_GRIEF",
+                                }
+                                _drive_name = _drive_map.get(str(emocao_detectada), "")
+                                if _drive_name and _drive_name in drive_system.drives:
+                                    _drive_obj = drive_system.drives[_drive_name]
+                                    _drive_obj.baseline = max(
+                                        0.02,
+                                        _drive_obj.baseline - 0.005
+                                    )
+                            except Exception:
+                                pass
+
                     except Exception:
                         pass
             except Exception as e:
@@ -909,13 +955,15 @@ def chat_loop():
             try:
                 # Salva estado corporal APÓS aplicação da emoção para o Somatic Marker
                 estado_atual = {
-                    "tensao":      corpo.tensao,
-                    "calor":       corpo.calor,
-                    "vibracao":    corpo.vibracao,
-                    "fluidez":     corpo.fluidez,
-                    "pulso":       getattr(corpo, "pulso", 0.5),
-                    "luminosidade": getattr(corpo, "luminosidade", 0.5),
-                    "emocao":      str(emocao_detectada),
+                    "tensao":           corpo.tensao,
+                    "calor":            corpo.calor,
+                    "vibracao":         corpo.vibracao,
+                    "fluidez":          corpo.fluidez,
+                    "pulso":            getattr(corpo, "pulso", 0.5),
+                    "luminosidade":     getattr(corpo, "luminosidade", 0.5),
+                    "emocao":           str(emocao_detectada),
+                    "prediction_error": float(getattr(prediction, "current_error", 0.0)),
+                    "rpt_coherence":    rpt_coherence if rpt_coherence else {},
                 }
                 mem_index.index_memory(
                     ts=input_data["timestamp"],

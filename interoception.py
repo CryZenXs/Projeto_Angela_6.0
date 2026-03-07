@@ -153,8 +153,6 @@ class Interoceptor:
         # Ajusta intensidade perceptiva de acordo com emoção atual
         if hasattr(self.corpo, "intensidade_emocional"):
             intensidade_mod = 0.8 + (self.corpo.intensidade_emocional * 0.4)
-            sensacoes = [s for s in sensacoes]  # cria nova lista
-            sensacoes = [f"{s}" for s in sensacoes]  # preserva o texto original
             intensidade *= intensidade_mod
 
         # --- cache de intensidade para uso seguro por outros módulos ---
@@ -228,7 +226,7 @@ class Interoceptor:
 
             # === VALIDAÇÃO CRÍTICA: Prevenir vínculos auto-referenciais ===
             # Angela não pode ter vínculo afetivo consigo mesma nem com autores desconhecidos
-            if autor_atual.lower() in ("angela", "ângela", "sistema", "sistema(deepawake)", "desconhecido", ""):
+            if autor_atual.lower() in self._AUTORES_SISTEMA or autor_atual == "":
                 return  # silenciosamente ignora eventos auto-gerados
 
             # 3) Decaimento temporal suave (meia-vida ~7 dias)
@@ -316,7 +314,7 @@ class Interoceptor:
         return "desconhecido"
 
     _AUTORES_SISTEMA = frozenset(
-        ("sistema", "sistema(deepawake)", "angela", "\xe2\x80\x8c\xc3\xa2ngela", "desconhecido")
+        ("sistema", "sistema(deepawake)", "angela", "ângela", "desconhecido")
     )
 
     def _registrar_interocepcao(self, emocao_rotulada, sensacoes=None, intensidade=0.0,
@@ -341,7 +339,7 @@ class Interoceptor:
             autor_atual = self._resolver_autor()
 
         # === Validação: prevenir auto-referência ===
-        if str(autor_atual).lower() in ("sistema", "sistema(deepawake)", "angela", "ângela", "desconhecido"):
+        if str(autor_atual).lower() in self._AUTORES_SISTEMA:
             return
 
         # grava trace emocional

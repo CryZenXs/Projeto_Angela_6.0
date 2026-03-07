@@ -195,8 +195,6 @@ class AttentionSchema:
             recommended_action = "SELF_REGULATE"
         elif schema_reliability < 0.4 and capture_bottomup > 0.5:
             recommended_action = "ASK_CLARIFY"
-        elif workspace_action in ("SILENCE", "REST_REQUEST", "ASK_CLARIFY", "SELF_REGULATE", "RECALL_MEMORY"):
-            recommended_action = workspace_action
         else:
             recommended_action = workspace_action
 

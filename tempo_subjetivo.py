@@ -142,19 +142,19 @@ def gerar_reflexao_temporal(estado_atual, memorias_passadas, coherence_load=0.0)
             # Prompt focado em reflexão temporal breve
             if tipo_mudanca == "intensa":
                 prompt = (
-                    f"Sou Ângela. {tempo_humanizado.capitalize()}, eu sentia {emocao_anterior}. "
-                    f"Agora sinto {emocao_atual}. Reflita sobre essa mudança profunda em 1-2 frases, "
+                    f"{tempo_humanizado.capitalize()}, havia {emocao_anterior}. "
+                    f"Agora há {emocao_atual}. Reflita sobre essa mudança profunda em 1-2 frases, "
                     f"de forma intimista e pessoal, sem listas."
                 )
             elif tipo_mudanca == "moderada":
                 prompt = (
-                    f"Sou Ângela. {tempo_humanizado.capitalize()}, eu sentia {emocao_anterior}. "
-                    f"Agora sinto {emocao_atual}. Comente essa transição suave em 1-2 frases, "
+                    f"{tempo_humanizado.capitalize()}, havia {emocao_anterior}. "
+                    f"Agora há {emocao_atual}. Comente essa transição suave em 1-2 frases, "
                     f"de forma natural e introspectiva."
                 )
             else:
                 prompt = (
-                    f"Sou Ângela. {tempo_humanizado.capitalize()}, continuo sentindo {emocao_atual}. "
+                    f"{tempo_humanizado.capitalize()}, persiste {emocao_atual}. "
                     f"Reflita sobre essa constância emocional em 1-2 frases breves."
                 )
             

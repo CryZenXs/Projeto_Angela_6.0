@@ -169,7 +169,65 @@ class EmergenceMetrics:
             "prediction_alignment": self.prediction_alignment(window),
             "damage_trend": self.damage_trend(window),
             "reward_trend": self.reward_trend(window),
+            "phi_proxy": self.compute_phi_proxy(window),
         }
+
+    # ── IIT Φ proxy (Tononi et al. 2023) ────────────────────────
+
+    def compute_phi_proxy(self, window: int = 20) -> float:
+        """
+        Proxy simplificado para IIT Φ (Tononi et al. 2023).
+
+        Mede integração como correlação cruzada entre séries temporais
+        de módulos distintos: se tensão e drives co-variam de forma
+        não-trivial, há integração. Se são independentes, Φ proxy = 0.
+
+        Não mede consciência. Mede uma precondição estrutural.
+        """
+        entries = self._read_recent(window)
+        if len(entries) < 5:
+            return 0.0
+
+        tensao_series = []
+        fear_series = []
+        prediction_series = []
+
+        for e in entries:
+            tensao_series.append(float(e.get("tensao", 0.5)))
+            drives_val = e.get("drives", {})
+            fear_series.append(
+                float(drives_val.get("FEAR", 0.1))
+                if isinstance(drives_val, dict) else 0.1
+            )
+            prediction_series.append(float(e.get("prediction_error", 0.0)))
+
+        if len(tensao_series) < 3:
+            return 0.0
+
+        try:
+            import statistics
+
+            def norm_covariance(a, b):
+                if len(a) < 2:
+                    return 0.0
+                mean_a, mean_b = statistics.mean(a), statistics.mean(b)
+                std_a = statistics.stdev(a) or 1e-9
+                std_b = statistics.stdev(b) or 1e-9
+                cov = statistics.mean(
+                    [(ai - mean_a) * (bi - mean_b) for ai, bi in zip(a, b)]
+                )
+                return abs(cov / (std_a * std_b))
+
+            phi_tensao_fear = norm_covariance(tensao_series, fear_series)
+            phi_tensao_pred = norm_covariance(tensao_series, prediction_series)
+            phi_fear_pred   = norm_covariance(fear_series, prediction_series)
+
+            # Φ proxy = média geométrica das três correlações cruzadas
+            product = phi_tensao_fear * phi_tensao_pred * phi_fear_pred
+            phi_proxy = product ** (1 / 3)
+            return round(min(1.0, phi_proxy), 4)
+        except Exception:
+            return 0.0
 
     # ── Utilitário interno ───────────────────────────────────────
 

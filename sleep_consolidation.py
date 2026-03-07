@@ -196,25 +196,45 @@ def _buscar_episodios_candidatos(mem_index, janela_horas: Optional[float] = None
                 janela_inicio = (datetime.now() - timedelta(hours=_EPISODIC_WINDOW_HORAS)).isoformat()
 
         rows = mem_index._conn.execute(
-            "SELECT id, ts, conteudo, resposta, emocao, intensidade, tipo "
+            "SELECT id, ts, conteudo, resposta, emocao, intensidade, tipo, estado_interno_json "
             "FROM memories "
             "WHERE tipo = 'dialogo' "
             "  AND intensidade >= ? "
             "  AND ts >= ? "
             "ORDER BY intensidade DESC "
-            "LIMIT 20",
+            "LIMIT 40",
             (_EPISODIC_THRESHOLD_INTENSIDADE, janela_inicio)
         ).fetchall()
 
         for row in rows:
+            intensidade = row["intensidade"] or 0.0
+
+            # ── Walker (2017): saliência boost via prediction_error ────────────
+            # Memórias com alta surpresa preditiva têm prioridade equivalente
+            # a memórias emocionalmente intensas — ambas merecem consolidação.
+            pred_error = 0.0
+            try:
+                _ei_raw = row["estado_interno_json"]
+                if _ei_raw:
+                    _ei = json.loads(_ei_raw)
+                    pred_error = float(_ei.get("prediction_error", 0.0))
+            except Exception:
+                pred_error = 0.0
+            saliencia_efetiva = max(intensidade, pred_error * 0.8)
+
             candidatos.append({
-                "ts":         row["ts"] or "",
-                "conteudo":   (row["conteudo"] or "")[:300],
-                "resposta":   (row["resposta"] or "")[:300],
-                "emocao":     row["emocao"] or "neutro",
-                "intensidade": row["intensidade"] or 0.0,
-                "tipo":       row["tipo"] or "dialogo",
+                "ts":              row["ts"] or "",
+                "conteudo":        (row["conteudo"] or "")[:300],
+                "resposta":        (row["resposta"] or "")[:300],
+                "emocao":          row["emocao"] or "neutro",
+                "intensidade":     intensidade,
+                "saliencia":       saliencia_efetiva,
+                "tipo":            row["tipo"] or "dialogo",
             })
+
+        # Re-ordenar por saliência efetiva (pode diferir da intensidade pura)
+        candidatos.sort(key=lambda c: c["saliencia"], reverse=True)
+        candidatos = candidatos[:20]
     except Exception:
         pass
     return candidatos
@@ -415,6 +435,8 @@ def _compress_pattern_to_schema(pat: dict, generate_fn, friction_damage: float) 
             f"com intensidade média {intensidade_media:.2f}."
         )
 
+    _periodo = _extrair_periodo_amostras(amostras)
+
     return {
         "tipo":            "schema_nrem",
         "data":            datetime.now().isoformat(),
@@ -423,7 +445,19 @@ def _compress_pattern_to_schema(pat: dict, generate_fn, friction_damage: float) 
         "intensidade_media": round(intensidade_media, 3),
         "resumo":          resumo_schema.strip(),
         "amostras_repr":   trechos,
+        **_periodo,
     }
+
+
+def _extrair_periodo_amostras(amostras: list) -> dict:
+    """Extrai período (início/fim) de uma lista de amostras com campo 'ts'."""
+    try:
+        timestamps = [a.get("ts", "") for a in amostras if a.get("ts")]
+        if timestamps:
+            return {"periodo": {"inicio": min(timestamps), "fim": max(timestamps)}}
+    except Exception:
+        pass
+    return {}
 
 
 
@@ -521,6 +555,23 @@ def rem_integration(
         reconsolidated = _reconsolidate_old_memory(corpo, generate_fn, friction_damage)
         result["reconsolidated"] = reconsolidated
 
+        # ── REM Emotional Stripping (Walker 2017) ─────────────────────────────
+        # REM remove arousal agudo de memórias difíceis, preservando o conteúdo.
+        # Não modifica a memória — reduz levemente o drive correspondente.
+        if reconsolidated and drive_system is not None:
+            _emocao_orig = reconsolidated.get("emocao_original", "")
+            _intens_orig = float(reconsolidated.get("intensidade_original", 0.0))
+            _AROUSAL_DRIVES = {"medo": "FEAR", "raiva": "RAGE", "tristeza": "PANIC_GRIEF"}
+            _drive_name = _AROUSAL_DRIVES.get(_emocao_orig, "")
+            if _drive_name and _intens_orig > 0.5:
+                try:
+                    _drive_obj = drive_system.drives.get(_drive_name)
+                    if _drive_obj is not None:
+                        reducao = min(0.08, _intens_orig * 0.1)
+                        _drive_obj.level = max(_drive_obj.baseline, _drive_obj.level - reducao)
+                except Exception:
+                    pass
+
         dream = _generate_emergent_dream(
             mem_index=mem_index,
             corpo=corpo,
@@ -610,14 +661,15 @@ def _reconsolidate_old_memory(corpo, generate_fn, friction_damage: float) -> Opt
         return None
 
     entrada_rec = {
-        "tipo":                       "reconsolidacao_rem",
-        "data":                       datetime.now().isoformat(),
-        "memoria_original_ts":        memoria_antiga.get("data", ""),
-        "emocao_original":            memoria_antiga.get("emocao", ""),
-        "emocao_atual_na_releitura":  estado_atual["emocao"],
-        "nova_perspectiva":           nova_perspectiva.strip(),
-        "estado_corporal_releitura":  estado_atual,
-    }
+                        "tipo":                       "reconsolidacao_rem",
+                        "data":                       datetime.now().isoformat(),
+                        "memoria_original_ts":        memoria_antiga.get("data", ""),
+                        "emocao_original":            memoria_antiga.get("emocao", ""),
+                        "intensidade_original":       float(memoria_antiga.get("intensidade", 0.0)),
+                        "emocao_atual_na_releitura":  estado_atual["emocao"],
+                        "nova_perspectiva":           nova_perspectiva.strip(),
+                        "estado_corporal_releitura":  estado_atual,
+                    }
     _append_to_autobio([entrada_rec])
     return entrada_rec
 

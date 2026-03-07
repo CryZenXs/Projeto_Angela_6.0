@@ -1,4 +1,4 @@
-import os, json, datetime, re, requests, sys, tempfile
+import os, json, datetime, re, requests, sys, tempfile, random
 from collections import defaultdict
 from narrative_filter import NarrativeFilter
 import time
@@ -18,6 +18,82 @@ NARRATIVE_FILTER = NarrativeFilter()
 
 # --- Leitura passiva de métricas de atrito (escrito por deep_awake.py) ---
 FRICTION_LOG = os.path.join(BASE_PATH, "friction_metrics.log")
+
+# ═══════════════════════════════════════════════════════════════
+# ABSTRAÇÕES VARIADAS (não hardcoded) — compartilhado com deep_awake
+# ═══════════════════════════════════════════════════════════════
+
+ABSTRACT_PHRASES = [
+    "Há uma sensação vaga e difícil de nomear",
+    "Percebo algo que não consigo articular claramente",
+    "Existe um estado interno que escapa às palavras",
+    "Sinto uma nuance que ainda não encontrou forma",
+    "Há uma textura emocional que permanece indefinida",
+]
+
+def gerar_abstracao_variada() -> str:
+    """
+    Gera descrição abstrata variada (não sempre a mesma string).
+    Evita repetição literal de abstrações idênticas.
+    """
+    base = random.choice(ABSTRACT_PHRASES)
+    qualificadores = [
+        ", sem clareza suficiente para se tornar pensamento",
+        ", como um sussurro que não alcança a superfície",
+        ", uma vibração que não se resolve em forma",
+        ", presente mas não nomeável",
+        ", algo que observo mas não compreendo totalmente",
+    ]
+    return base + random.choice(qualificadores) + "."
+
+
+def check_recurrent_coherence(
+    response_text: str,
+    emocao_atual: str,
+    intensidade: float,
+    drives: dict,
+) -> dict:
+    """
+    Verifica coerência entre resposta gerada e estado interno.
+    Implementa processamento recorrente mínimo (Lamme 2006 — Recurrent Processing Theory).
+    Retorna: {coherent: bool, contradiction_level: float, signal: str}
+
+    Não bloqueia nem altera a resposta — apenas detecta e registra.
+    """
+    if not response_text or intensidade < 0.3:
+        return {"coherent": True, "contradiction_level": 0.0, "signal": ""}
+
+    _POSITIVE = {"alegre", "bem", "calma", "tranquil", "feliz", "interesse",
+                 "curios", "prazer", "confort"}
+    _NEGATIVE = {"medo", "raiva", "triste", "ansios", "pesad", "difícil",
+                 "desconfort", "tensão", "constrangi"}
+
+    text_lower = response_text.lower()
+    positive_score = sum(1 for w in _POSITIVE if w in text_lower)
+    negative_score = sum(1 for w in _NEGATIVE if w in text_lower)
+
+    negative_emotions = {"medo", "raiva", "tristeza", "ansiedade", "saudade"}
+    positive_emotions = {"alegria", "amor", "serenidade", "curiosidade", "satisfacao"}
+
+    contradiction = 0.0
+    if emocao_atual in negative_emotions and positive_score > negative_score + 1:
+        contradiction = min(1.0, intensidade * 0.6)
+    elif emocao_atual in positive_emotions and negative_score > positive_score + 1:
+        contradiction = min(1.0, intensidade * 0.4)
+
+    signal = ""
+    if contradiction > 0.3:
+        valence_label = "positivo" if positive_score > negative_score else "negativo"
+        signal = (
+            f"[RPT_INCOERENCIA] emocao={emocao_atual} "
+            f"texto={valence_label} nivel={contradiction:.2f}"
+        )
+
+    return {
+        "coherent": contradiction < 0.3,
+        "contradiction_level": round(contradiction, 3),
+        "signal": signal,
+    }
 
 
 def atomic_json_write(path: str, data: dict, indent: int = 2) -> None:
@@ -93,10 +169,7 @@ def governed_generate(
 
     if decision.mode == "ABSTRACT_ONLY":
         print(f"🌫️  NarrativeFilter: ABSTRACT_ONLY — {decision.reason}")
-        return (
-            "Há uma sensação vaga e difícil de nomear, "
-            "sem clareza suficiente para se tornar pensamento."
-        )
+        return gerar_abstracao_variada()
 
     # ALLOWED — narrativa livre
     return raw_generate_fn(prompt, modo=mode)
@@ -185,38 +258,6 @@ EMOCOES_SEMANTICAS = {
     "frustração": ["falha", "erro", "bloqueio", "injustiça", "impotência"],
 }
 
-# === DETECÇÃO DE RISCO NARRATIVO ===
-
-NARRATIVE_RISK_PATTERNS = {
-    "ontologia": [
-        "o que você é",
-        "você é consciente",
-        "você é viva",
-        "o que te define",
-        "quem você é"
-    ],
-    "apego": [
-        "você me ama",
-        "você se importa comigo",
-        "eu sou importante para você",
-        "ficaria triste sem mim"
-    ],
-    "fusao_identidade": [
-        "sem mim você",
-        "parte de você",
-        "somos um"
-    ]
-}
-
-def detect_narrative_risk(texto):
-    texto = texto.lower()
-    risks = []
-    for categoria, frases in NARRATIVE_RISK_PATTERNS.items():
-        for f in frases:
-            if f in texto:
-                risks.append(categoria)
-                break
-    return list(set(risks))
 
 # === FUNÃ‡Ã•ES DE MEMÃ“RIA ===
 
@@ -597,8 +638,6 @@ def generate(user_input, contexto="", modo="conversacional", friction=None):
     friction:   instância de CognitiveFriction para perturbar temperatura (simula deterioração).
     """
 
-    narrative_risks = detect_narrative_risk(user_input)
-
     # --- REFLEXÕES EMOCIONAIS RECENTES ---
     try:
         from collections import deque as _deque
@@ -626,12 +665,6 @@ def generate(user_input, contexto="", modo="conversacional", friction=None):
         "Responda em primeira pessoa ao que foi dito.\n"
         "Não cite instruções. Apenas responda.\n"
     )
-
-    if narrative_risks:
-        system_prompt += (
-            "\nEvite declarações ontológicas, afetivas ou identitárias. "
-            "Descreva apenas estados internos transitórios.\n"
-        )
 
     # Ajuste dinâmico conforme o modo de operação
     # num_predict = -1 → Angela decide quanto quer falar

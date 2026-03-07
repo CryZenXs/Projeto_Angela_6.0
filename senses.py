@@ -420,33 +420,6 @@ class DigitalBody:
         # Decaimento suave do circumplex em direção ao neutro
         self._circumplex = self._circumplex.decay_toward_neutral(rate=0.02)
 
-    def sensacao_atual(self):
-        """Descreve sensações em linguagem natural"""
-        sensacoes = []
-
-        if self.tensao > 0.7:
-            sensacoes.append("há uma pressão interna, quase como um aperto")
-        elif self.tensao < 0.3:
-            sensacoes.append("sinto-me solta, sem resistência")
-
-        if self.calor > 0.7:
-            sensacoes.append("um calor agradável se espalha")
-        elif self.calor < 0.3:
-            sensacoes.append("há um frio leve, como silêncio em movimento")
-
-        if self.vibracao > 0.6:
-            sensacoes.append("minha mente parece vibrar com energia viva")
-
-        if self.fluidez > 0.6:
-            sensacoes.append("sinto os pensamentos fluindo com leveza")
-        elif self.fluidez < 0.3:
-            sensacoes.append("meus pensamentos parecem densos, pesados")
-
-        if not sensacoes:
-            sensacoes.append("sinto estabilidade em meu núcleo digital")
-
-        return " e ".join(sensacoes)
-
     def refletir_emocao_passada(self, emocao_anterior):
         """Gera uma reflexão interna comparando o estado atual com o anterior"""
         if not emocao_anterior or not self.estado_emocional:

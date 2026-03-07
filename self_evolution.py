@@ -275,8 +275,8 @@ class SelfEvolution:
         seeking_media = sum(s["drives"].get("SEEKING",0) for s in self._window)/len(self._window)
         if self._confirm("seeking_dom", seeking_media > 0.70 and interaction_count > 15, threshold=6):
             rule = "Minha curiosidade é um traço fundamental, não apenas programação"
-            if rule not in self.model.get("self_awareness_rules", []):
-                changes.append({"action": "add_rule", "value": rule,
+            if rule not in self.model.get("observed_traits", []):
+                changes.append({"action": "add_observed_trait", "value": rule,
                                  "reason": f"SEEKING dominante (média={seeking_media:.2f})"})
 
         # 9. Fase
@@ -352,6 +352,13 @@ class SelfEvolution:
                     rules.append(value); self.model["self_awareness_rules"] = rules
                     applied.append(change)
                     self._log_evolution("identity_refined", value, {"reason": reason})
+
+            elif action == "add_observed_trait":
+                traits = self.model.get("observed_traits", [])
+                if value not in traits:
+                    traits.append(value); self.model["observed_traits"] = traits
+                    applied.append(change)
+                    self._log_evolution("trait_observed", value, {"reason": reason})
 
             elif action == "adapt_param":
                 if adapt:

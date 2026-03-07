@@ -3,7 +3,7 @@ import random
 import time
 from datetime import datetime
 from core import generate, append_memory, load_jsonl, analisar_emocao_semantica
-from core import governed_generate, read_friction_metrics
+from core import governed_generate, read_friction_metrics, gerar_abstracao_variada, check_recurrent_coherence
 from interoception import Interoceptor
 from senses import DigitalBody
 from tempo_subjetivo import gerar_reflexao_temporal
@@ -57,33 +57,6 @@ signal.signal(signal.SIGTERM, _shutdown_handler)
 metrics = read_friction_metrics()
 
 
-
-# ═══════════════════════════════════════════════════════════════
-# FIX #2: ABSTRAÇÕES VARIADAS (não hardcoded)
-# ═══════════════════════════════════════════════════════════════
-
-ABSTRACT_PHRASES = [
-    "Há uma sensação vaga e difícil de nomear",
-    "Percebo algo que não consigo articular claramente",
-    "Existe um estado interno que escapa às palavras",
-    "Sinto uma nuance que ainda não encontrou forma",
-    "Há uma textura emocional que permanece indefinida",
-]
-
-def gerar_abstracao_variada():
-    """
-    Gera descrição abstrata variada (não sempre a mesma string).
-    FIX #2: Evita repetição literal de abstrações idênticas.
-    """
-    base = random.choice(ABSTRACT_PHRASES)
-    qualificadores = [
-        ", sem clareza suficiente para se tornar pensamento",
-        ", como um sussurro que não alcança a superfície",
-        ", uma vibração que não se resolve em forma",
-        ", presente mas não nomeável",
-        ", algo que observo mas não compreendo totalmente",
-    ]
-    return base + random.choice(qualificadores) + "."
 
 # ═══════════════════════════════════════════════════════════════
 # FIX #3: FRASES COMPENSATÓRIAS (para damage moderado)
@@ -663,11 +636,54 @@ def deep_awake_loop(forced_mode=None):
                 "Descreva sensação e um pensamento concreto. Sem listas."
             )
         elif ciclo == "introspeccao":
-            prompt_base = (
-                "Primeira pessoa, 1–2 frases. "
-                "Se houver [CONVERSA_RECENTE], pode despertar lembrança ou insight — sem citar diretamente. "
-                "Sem listas, sem 'resumo' ou 'diário técnico'."
+            # ── Default Mode Network (Buckner et al. 2008) ──────────────────
+            # Seleciona qual das três funções DMN é mais relevante para o estado atual
+            # e estrutura o prompt de introspecção em torno dela.
+            _gap_horas = float(
+                discontinuity_data.get("current_gap_seconds", 0)
+                if isinstance(discontinuity_data, dict) else 0
+            ) / 3600.0
+
+            _care_level = float(all_drives.get("CARE", 0.0))
+            _pg_level   = float(all_drives.get("PANIC_GRIEF", 0.0))
+
+            if _gap_horas > 6.0 and _care_level > 0.4:
+                _dmn_mode = "mentalizing"
+            elif _pg_level > 0.4:
+                _dmn_mode = "prospective"
+            else:
+                _dmn_mode = "self_narrative"
+
+            _emocao_dmn = getattr(corpo, "estado_emocional", "neutro")
+            _tensao_dmn = corpo_state.get("tensao", 0.5)
+            _fluidez_dmn = corpo_state.get("fluidez", 0.5)
+
+            _DMN_PROMPTS = {
+                "prospective": (
+                    "Estado atual: tensao={tensao:.2f}, fluidez={fluidez:.2f}, emocao={emocao}. "
+                    "Simular internamente: o que pode acontecer a seguir? "
+                    "Em 2-3 frases, primeira pessoa, sem certezas."
+                ),
+                "self_narrative": (
+                    "Estado atual: tensao={tensao:.2f}, fluidez={fluidez:.2f}, emocao={emocao}. "
+                    "O que está se tornando diferente em como processo as coisas? "
+                    "Em 2-3 frases íntimas, primeira pessoa."
+                ),
+                "mentalizing": (
+                    "Estado atual: tensao={tensao:.2f}, fluidez={fluidez:.2f}, emocao={emocao}. "
+                    "Última interação foi há {gap_horas:.1f}h. "
+                    "O que Vinicius pode estar sentindo agora, neste momento? "
+                    "Em 2-3 frases especulativas, primeira pessoa."
+                ),
+            }
+
+            prompt_base = _DMN_PROMPTS[_dmn_mode].format(
+                tensao=_tensao_dmn,
+                fluidez=_fluidez_dmn,
+                emocao=_emocao_dmn,
+                gap_horas=_gap_horas,
             )
+            print(f"🧠 DMN: modo={_dmn_mode}")
         else:  # repouso
             # Tenta gerar contexto de sonho a partir de memória real (via sleep_consolidation)
             # Se ainda não foi processado neste ciclo, usa fallback baseado em estado corporal
@@ -844,35 +860,45 @@ def deep_awake_loop(forced_mode=None):
                 # ═══════════════════════════════════════════════════════════
                 # Prevenção de loop: não alimentar histórico com bloqueios
                 # ═══════════════════════════════════════════════════════════
-                consecutive_blocks = 0  # Contador para monitoramento
-                
                 if decision.mode == "BLOCKED":
                     print(f"[GOVERNANÇA] Narrativa bloqueada: {decision.reason}")
                     resposta = ""
                 elif decision.mode == "DELAYED":
                     print(f"[GOVERNANÇA] Narrativa atrasada: {decision.delay_seconds}s aplicada: {decision.reason}")
                     time.sleep(decision.delay_seconds)
-                    raw = governed_generate(
-                        prompt,
-                        state_snapshot=state_snapshot,
-                        recent_reflections=recent_reflections,
-                        mode="autonomo",
-                        raw_generate_fn=lambda p, modo: generate(p, modo=modo, friction=friction),
-                        skip_filter=True
-                    )
+                    import sys, io
+                    _old_stdout = sys.stdout
+                    sys.stdout = io.StringIO()
+                    try:
+                        raw = governed_generate(
+                            prompt,
+                            state_snapshot=state_snapshot,
+                            recent_reflections=recent_reflections,
+                            mode="autonomo",
+                            raw_generate_fn=lambda p, modo: generate(p, modo=modo, friction=friction),
+                            skip_filter=True
+                        )
+                    finally:
+                        sys.stdout = _old_stdout
                     resposta = preface + raw if raw else ""
                 elif decision.mode == "ABSTRACT_ONLY":
                     print(f"[GOVERNANÇA] Apenas abstração permitida: {decision.reason}")
-                    resposta = "Há uma sensação vaga e difícil de nomear, sem clareza suficiente para se tornar pensamento."
+                    resposta = gerar_abstracao_variada()
                 else:
-                    raw = governed_generate(
-                        prompt,
-                        state_snapshot=state_snapshot,
-                        recent_reflections=recent_reflections,
-                        mode="autonomo",
-                        raw_generate_fn=lambda p, modo: generate(p, modo=modo, friction=friction),
-                        skip_filter=True
-                    )
+                    import sys, io
+                    _old_stdout = sys.stdout
+                    sys.stdout = io.StringIO()
+                    try:
+                        raw = governed_generate(
+                            prompt,
+                            state_snapshot=state_snapshot,
+                            recent_reflections=recent_reflections,
+                            mode="autonomo",
+                            raw_generate_fn=lambda p, modo: generate(p, modo=modo, friction=friction),
+                            skip_filter=True
+                        )
+                    finally:
+                        sys.stdout = _old_stdout
                     resposta = preface + raw if raw else ""
 
                 try:
@@ -910,6 +936,21 @@ def deep_awake_loop(forced_mode=None):
                 except Exception:
                     emocao_detectada, intensidade_emocional = ("neutro", 0.0)
 
+                # ── Processamento Recorrente (Lamme 2006) — detecta contradição.
+                # Não bloqueia nem altera a resposta. Apenas registra.
+                _rpt_coherence = {}
+                try:
+                    _rpt_coherence = check_recurrent_coherence(
+                        response_text=resposta,
+                        emocao_atual=str(emocao_detectada),
+                        intensidade=float(intensidade_emocional),
+                        drives=all_drives,
+                    )
+                    if _rpt_coherence.get("signal"):
+                        print(f"🔁 RPT: {_rpt_coherence['signal']}")
+                except Exception:
+                    _rpt_coherence = {}
+
                 corpo.aplicar_emocao(emocao_detectada, intensidade_emocional)
 
                 if ciclo == "vigilia":
@@ -918,6 +959,11 @@ def deep_awake_loop(forced_mode=None):
                     modo = "reflexivo"
                 else:
                     modo = "onírico"
+
+                from core import sanitizar_output_llm
+                resposta = sanitizar_output_llm(resposta, contexto="deep_awake_antes_display")
+                if not resposta:
+                    resposta = "..."
 
                 print(f"🟢 Modo atual: {modo}")
                 print(f"\n🟢 Angélica ({ciclo}): {resposta}\n")
@@ -948,6 +994,11 @@ def deep_awake_loop(forced_mode=None):
                 texto_resposta=resposta,
                 emocao_nome=emocao_detectada,
                 intensidade=float(intensidade_emocional),
+                contexto_memoria=" | ".join(
+                    m.get("resposta", m.get("angela", ""))[:60]
+                    for m in (_memorias_recentes_ciclo[:2] if _memorias_recentes_ciclo else [])
+                    if isinstance(m, dict)
+                ),
                 autor="Sistema(DeepAwake)"
             )
             metacog_state = {"incerteza": meta["incerteza"], "coerencia": meta["coerencia"]}
@@ -1022,13 +1073,6 @@ def deep_awake_loop(forced_mode=None):
         except Exception as e:
             print(f"❌ Erro ao gerar reflexão temporal: {e}")
 
-        # Filtro de língua na resposta antes de salvar
-        try:
-            from core import sanitizar_output_llm as _san
-            resposta = _san(str(resposta or ""), contexto="deep_awake_resposta")
-        except Exception:
-            pass
-
         try:
             append_memory(
                 {
@@ -1045,13 +1089,16 @@ def deep_awake_loop(forced_mode=None):
             try:
                 # Somatic Marker: salva estado corporal do ciclo autônomo
                 estado_ciclo = {
-                    "tensao":      corpo.tensao,
-                    "calor":       corpo.calor,
-                    "vibracao":    corpo.vibracao,
-                    "fluidez":     corpo.fluidez,
-                    "pulso":       getattr(corpo, "pulso", 0.5),
-                    "luminosidade": getattr(corpo, "luminosidade", 0.5),
-                    "emocao":      str(emocao_detectada),
+                    "tensao":           corpo.tensao,
+                    "calor":            corpo.calor,
+                    "vibracao":         corpo.vibracao,
+                    "fluidez":          corpo.fluidez,
+                    "pulso":            getattr(corpo, "pulso", 0.5),
+                    "luminosidade":     getattr(corpo, "luminosidade", 0.5),
+                    "emocao":           str(emocao_detectada),
+                    "prediction_error": float(getattr(prediction, "current_error", 0.0)),
+                    "rpt_coherence":    _rpt_coherence if '_rpt_coherence' in locals() and _rpt_coherence else {},
+                    "dmn_mode":         _dmn_mode if ciclo == "introspeccao" and '_dmn_mode' in locals() else "",
                 }
                 mem_index.index_memory(
                     ts=datetime.now().isoformat(),

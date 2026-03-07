@@ -108,3 +108,13 @@ class PredictionEngine:
             f"erro={self.current_error:.3f}\n"
             f"[/SURPRESA_PREDITIVA]\n"
         )
+
+    def get_efe_context(self) -> dict:
+        """Retorna contexto para cálculo de EFE."""
+        return {
+            "prediction_error": self.current_error,
+            "surprise_level": self.get_surprise_level(),
+            "most_surprising_channel": max(
+                self._channel_errors, key=self._channel_errors.get
+            ) if self._channel_errors else "",
+        }

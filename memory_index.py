@@ -949,9 +949,9 @@ class MemoryIndex:
 
             if context_parts:
                 prompt = (
-                    "Sou Ângela, durante meu repouso, percebi padrões nas minhas memórias: "
+                    "Durante o repouso, padrões emergem nas memórias: "
                     + " ".join(context_parts) +
-                    " Reflita sobre o que esse padrão revela sobre mim, em 2-3 frases intimistas."
+                    " O que esse padrão revela, em 2-3 frases."
                 )
                 try:
                     insight = generate_fn(prompt)
