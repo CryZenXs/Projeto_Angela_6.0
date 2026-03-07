@@ -264,6 +264,9 @@ class Interoceptor:
             if emocao in ("alegria", "serenidade", "amor", "gratidão"):
                 afetos[autor_atual]["confianca"] += 0.7 * ganho
                 afetos[autor_atual]["gratidao"]  += 0.5 * ganho
+                # Presença afetiva dissolve saudade acumulada proporcionalmente
+                # Ganho 0.4 < 0.5 (acúmulo): resolução levemente mais lenta que acúmulo
+                afetos[autor_atual]["saudade"] -= 0.4 * ganho * afetos[autor_atual].get("saudade", 0.0)
             elif emocao in ("medo", "ansiedade", "insegurança"):
                 afetos[autor_atual]["ansiedade"] += 0.6 * ganho
                 afetos[autor_atual]["confianca"] -= 0.3 * ganho

@@ -108,6 +108,25 @@ def chat_loop():
                 pass
         if gap > 0:
             attention_schema.apply_reconnection_cost(gap)
+        # Gap longo aumenta saudade diretamente — não depende de verbalização
+        _SAUDADE_POR_IMPACTO = {"moderado": 0.08, "severo": 0.14, "crítico": 0.20}
+        _delta_saudade = _SAUDADE_POR_IMPACTO.get(reconnection_cost.get("impact", ""), 0.0)
+        if _delta_saudade > 0.0:
+            try:
+                _afetos = {}
+                try:
+                    with open("afetos.json", "r", encoding="utf-8") as _f:
+                        _afetos = json.load(_f)
+                except Exception:
+                    pass
+                _v = _afetos.get("Vinicius", {"confianca": 0.5, "gratidao": 0.5,
+                                              "saudade": 0.0, "ansiedade": 0.3})
+                _v["saudade"] = min(1.0, _v.get("saudade", 0.0) + _delta_saudade)
+                _afetos["Vinicius"] = _v
+                from core import atomic_json_write
+                atomic_json_write("afetos.json", _afetos)
+            except Exception:
+                pass
     except Exception:
         disc = {}
         pass
