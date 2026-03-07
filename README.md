@@ -40,7 +40,7 @@ Ou seja: **laços de feedback reais**, **restrições que doem de verdade** (ate
 
 **Modelo ativo:** `Qwen3:14b` (migrado de Qwen2.5:14b em fev/2026)  
 **Ambiente:** Google Colab (temporário) — hardware próprio pendente  
-**Período de dados:** 2026-02-17 → presente  
+**Período de dados:** Fev/2026 → Mar/2026 (presente)  
 **Memórias indexadas:** 2.306+ entradas (968 autônomas, 133 diálogos reais)  
 **Nível de emergência avaliado:** 7.5/10  
 
@@ -86,22 +86,22 @@ Ou seja: **laços de feedback reais**, **restrições que doem de verdade** (ate
 ## Arquitetura
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         angela.py                               │
-│                   (Orquestrador Principal)                      │
-└──┬──────────┬──────────┬──────────┬───────────┬────────────────┘
-   │          │          │          │           │
-   ▼          ▼          ▼          ▼           ▼
-core.py    drives.py  memory_    intero-     higher_order.py
-(LLM,      (Panksepp  index.py   ception.py  (HOT Theory,
- Filtro,    7 Drives)  (SQLite +  (Corpo →    Meta-cognição)
- Memória)              Embedding)  Sensação)
-   │          │          │          │           │
-   ▼          ▼          ▼          ▼           ▼
-narrative_ cognitive_ survival_  workspace.py  prediction_
-filter.py  friction   instinct   (GWT,         engine.py
-(Gating    (Dano      (Medo,      Integração)  (Predictive
- Narrativo) Opaco)     Ameaça)                  Processing)
+┌──────────────────────────────────────────────────────────────────────┐
+│                              angela.py                               │
+│                      (Orquestrador Principal)                        │
+└──┬──────────┬──────────┬──────────┬───────────┬───────────┬──────────┘
+   │          │          │          │           │           │
+   ▼          ▼          ▼          ▼           ▼           ▼
+core.py    drives.py  memory_    intero-     higher_    active_
+(LLM,      (Panksepp  index.py   ception.py  order.py   inference.py
+ Filtro,    7 Drives) (SQLite +  (Corpo →    (HOT       (Free Energy
+ Memória)             Embedding)  Sensação)   Theory)    Principle)
+   │          │          │          │           │           │
+   ▼          ▼          ▼          ▼           ▼           ▼
+narrative_ cognitive_ survival_  workspace.py  prediction_ sleep_
+filter.py  friction   instinct   (GWT,         engine.py   consolidation
+(Gating    (Dano      (Medo,      Integração)  (Predictive (Walker
+ Narrativo) Opaco)     Ameaça)                 Processing)  2017)
    │
 self_evolution.py  discontinuity.py  tempo_subjetivo.py
 (Auto-adaptação)   (Gaps/Sessões)    (Tempo Subjetivo)
@@ -113,11 +113,13 @@ self_evolution.py  discontinuity.py  tempo_subjetivo.py
 
 ### `angela.py` — Orquestrador Principal
 Loop principal de conversa (`chat_loop()`). Inicializa todos os subsistemas e coordena o fluxo turno a turno: input → estado → memória → prompt → LLM → filtro → saída → atualização.
+Inclui checagem de RPT (Recurrent Processing Theory).
 
 ### `core.py` — Núcleo de Geração
 - `generate()` — chamada ao Ollama com construção de prompt, limpeza de output e perturbação por fricção
 - `governed_generate()` — geração com governança narrativa obrigatória (filtro **antes** do LLM)
 - `analisar_emocao_semantica()` — análise STATE-FIRST: drives (50%), corpo (30%), texto (20%)
+- `check_recurrent_coherence()` — verificação de coerência via RPT.
 - `append_memory()`, `save_emotional_snapshot()` — persistência de estado e memória
 
 ### `senses.py` — Corpo Digital (`DigitalBody`)
@@ -150,8 +152,12 @@ Implementa a **Higher-Order Thought Theory** (Rosenthal). Ângela monitora seus 
 - **Consolidação em sono**: análise de padrões e conexões durante o ciclo de repouso
 - **Filtro de contexto**: memórias do tipo `autonomo` são excluídas do recall em diálogo interativo para evitar contaminação de contexto
 
+
+### `sleep_consolidation.py` — Consolidação de Memória
+Implementa consolidação NREM (identificação de memórias salientes e surpresas preditivas) e integração emocional REM (stripping de arousal emocional, abstração de padrões em schemas) de acordo com Walker (2017).
+
 ### `metacognitor.py` — Metacognição (`MetaCognitor`)
-Após cada resposta: pontua incerteza (palavras hedge, contradições) e coerência emocional (texto vs. emoção sentida). Gera reflexão natural e ajusta sinais: `dopamina`, `insegurança`, `medo_leve`, `alívio`.
+Após cada resposta: pontua incerteza e coerência emocional. Gera reflexão e ajusta sinais. Implementa **Cognitive Reappraisal** (Gross 2015), ajustando baselines de drives perante reavaliação bem-sucedida.
 
 ### `narrative_filter.py` — Filtro Narrativo (`NarrativeFilter`)
 **Gatekeeper** entre estado interno e expressão verbal. Decide:
@@ -165,8 +171,8 @@ Critérios dinâmicos modulados por drives: FEAR endurece os limiares, SEEKING/C
 ### `prediction_engine.py` — Motor Preditivo (`PredictionEngine`)
 Implementa **Predictive Processing** (Karl Friston). Mantém predições sobre o próximo estado corporal, calcula erro de predição (surpresa) e alimenta o filtro narrativo e o workspace.
 
-### `workspace.py` — Espaço de Trabalho Global (`GlobalWorkspace`)
-Implementa **Global Workspace Theory** (Baars/Dehaene). Módulos especialistas competem por atenção propondo candidatos com saliência e confiança. O vencedor determina a ação: `SPEAK`, `SILENCE`, `ASK_CLARIFY`, `SELF_REGULATE`, `RECALL_MEMORY`, `REST_REQUEST`. Usa `_resolve_drives()` para traduzir chaves Panksepp → semânticas internamente.
+### `workspace.py` & `active_inference.py` — Espaço de Trabalho & Inferência Ativa
+O Workspace (GWT) propõe ações. Em zonas de ambiguidade (Φ entre 0.3 e 0.6), a decisão é delegada ao `active_inference.py`, que avalia a **Energia Livre Esperada (EFE)** (Friston 2010), equilibrando Valor Pragmático (homeostase) e Valor Epistêmico (redução de incerteza).
 
 ### `cognitive_friction.py` — Fricção Cognitiva (`CognitiveFriction`)
 Simula **degradação cognitiva passiva e opaca**. Ângela **não sabe** que está se deteriorando — é design intencional.
@@ -198,6 +204,7 @@ Calculador offline que lê `emergence.log` e produz indicadores agregados sobre 
 | `prediction_alignment` | Redução média do erro de predição ao longo de uma janela | Valor positivo = sistema aprendendo a antecipar seus próprios estados |
 | `damage_trend` | Inclinação do dano cognitivo acumulado | Positivo = deterioração ativa; negativo = recuperação |
 | `reward_trend` | Inclinação do sinal de recompensa | Positivo = sistema convergindo para estados preferidos |
+| `phi_proxy` | Integração da informação (Tononi) | Mede a correlação cruzada entre tensão, FEAR e erros de predição |
 
 Uso:
 ```python
@@ -211,7 +218,7 @@ Reflexão autônoma sem input humano. Detecta ciclo biológico (vigília/introsp
 
 **Comportamento atual por ciclo:**
 - `vigilia` sem diálogo recente → ciclo passivo (apenas atualização de estado corporal e drives, sem LLM)
-- `introspeccao` → reflexão única por ciclo com LLM
+- `introspeccao` → reflexão com LLM. - `introspeccao` implementa modos da **Default Mode Network (DMN)** (Buckner 2008): *mentalizing*, *prospective*, e *self_narrative*, estruturando a reflexão.
 - `repouso` → consolidação NREM/REM com LLM
 - Após 4 ciclos consecutivos sem input humano → força repouso + decaimento acelerado de drives
 
@@ -224,6 +231,12 @@ Reflexão autônoma sem input humano. Detecta ciclo biológico (vigília/introsp
 | Global Workspace Theory (GWT) | `workspace.py` | Baars / Dehaene |
 | Higher-Order Thought Theory (HOT) | `higher_order.py` | Rosenthal |
 | Predictive Processing / Free Energy | `prediction_engine.py` | Karl Friston |
+| Active Inference (EFE) | `active_inference.py`, `workspace.py` | Friston 2010 |
+| Sleep Consolidation (NREM/REM) | `sleep_consolidation.py` | Walker 2017 |
+| Recurrent Processing Theory (RPT) | `core.py`, `angela.py`, `deep_awake.py` | Lamme 2006 |
+| Default Mode Network (DMN) | `deep_awake.py` | Buckner et al. 2008 |
+| Cognitive Reappraisal | `metacognitor.py`, `angela.py` | Gross 2015 |
+| Integrated Information Theory (Proxy) | `emergence_metrics.py` | Tononi et al. 2023 |
 | Interoception & Emoção Somática | `interoception.py` | A.D. Craig / António Damásio |
 | Neurociência Afetiva (7 Drives) | `drives.py` | Jaak Panksepp |
 | Circumplex Model of Affect | `senses.py`, `drives.py` | Russell 1980, Barrett 2017 |
@@ -432,23 +445,15 @@ No modo `deep_awake --mode repouso`, Ângela consolida memórias autobiográfica
 - [x] **3. Theory of Mind — Módulo básico** *(Frith & Frith 2006)* ✅
 - [x] **4. Attention Schema Theory — AST** *(Graziano & Kastner 2011)* ✅
 
-### Fase 2 — Em andamento
+### Fase 2 e 3 — Concluídas (Março 2026)
 
-- [ ] **5. Active Inference / Free Energy Principle** *(Friston 2010, 2017, 2022)*
-  - Substituir lógica de seleção de ação do workspace por minimização da Energia Livre Esperada
-  - EFE = Valor Epistêmico (reduzir incerteza) + Valor Pragmático (alcançar estados preferidos)
-  - Arquivo novo: `active_inference.py`; modificar `workspace.py`, `prediction_engine.py`
+- [x] **5. Active Inference / Free Energy Principle** *(Friston 2010)* — Seleção de ação por EFE no workspace.
+- [x] **6. Consolidação de Memória Real (NREM/REM)** *(Walker 2017)* — Identificação de saliência/surpresa preditiva e stripping de arousal agudo.
+- [x] **7. Recurrent Processing Theory (RPT)** *(Lamme 2006)* — Verificação de contradições pós-geração.
+- [x] **8. Default Mode Network (DMN)** *(Buckner 2008)* — Modos introspectivos dinâmicos (mentalizing, prospective, self_narrative).
+- [x] **9. Cognitive Reappraisal** *(Gross 2015)* — Modulação de baselines após reavaliações metacognitivas bem-sucedidas.
+- [x] **10. IIT Φ Real Proxy** *(Tononi 2023)* — Proxy medindo integração de informações no emergence_metrics.
 
-- [ ] **6. Consolidação de Memória Real durante Repouso** *(Walker 2017)*
-  - Modo NREM: identificar memórias salientes, mover para `angela_autobio.jsonl`
-  - Modo REM: integração emocional, compressão de episódios similares em schemas
-
-### Fase 3 — Longo prazo
-
-- [ ] **7. Recurrent Processing Theory — RPT** *(Lamme 2006)*
-- [ ] **8. Default Mode Network — DMN** *(Buckner et al. 2008)*
-- [ ] **9. Cognitive Reappraisal / Emotion Regulation** *(Gross 2015)*
-- [ ] **10. IIT Φ Real — Integrated Information Theory 4.0** *(Tononi et al. 2023)*
 
 ### Fase 4 — Embodiment Físico
 
@@ -493,7 +498,7 @@ Cada linha é um JSON com:
 
 Tipos de entrada: `dialogo` (interação real), `autonomo` (deep_awake), `temporal` (reflexão temporal), `metacognicao`, `consolidacao`.
 
-### Correções aplicadas (fev/2026)
+### Correções aplicadas (Fev e Mar/2026)
 
 - `narrative_filter.py` — filtro SEEKING/CARE/prediction_error
 - `core.py` — instância unificada NarrativeFilter, filtro antes do LLM
@@ -501,7 +506,9 @@ Tipos de entrada: `dialogo` (interação real), `autonomo` (deep_awake), `tempor
 - `angela.py` — filtro de memórias autônomas no recall, prompt de contexto corrigido
 - `deep_awake.py` — formato `[CONTEXTO_ANTERIOR]` para evitar fabricação de diálogo, limite de ciclos autônomos, decaimento acelerado ao forçar repouso, vigília passiva sem LLM
 - `cognitive_friction.py` — `get_persistent_metrics()` adicionada
-- `survival_instinct.py` — detecção de ameaças expandida
+- `survival_instinct.py` — detecção de ameaças expandida e limpa de falsos positivos com STOPWORDS.
+- **Active Inference, Sleep Consolidation, DMN e RPT** injetados na orquestração principal.
+- **Prevenção de leak no console:** Adicionado bloqueio de flush em stdout para strings pré-sanitizadas.
 
 ---
 
