@@ -1,0 +1,14 @@
+{
+  "damage": 0.0,
+  "load": 0.0,
+  "chronic": false,
+  "last_updated": "2026-03-07T14:45:36.679482",
+  "total_sessions": 95,
+  "version": "2.0.0",
+  "last_reset": {
+    "timestamp": "2026-03-07T14:45:36.679528",
+    "reason": "init endocrine phase 4",
+    "previous_damage": 1.0,
+    "previous_load": 0.8351570125372134
+  }
+}

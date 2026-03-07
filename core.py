@@ -775,6 +775,7 @@ def generate(user_input, contexto="", modo="conversacional", friction=None):
     text = re.sub(r"\[ESTADO_MENTAL\].*?\[/ESTADO_MENTAL\]", "", text, flags=re.DOTALL)
     text = re.sub(r"\[INTEROCEPCAO_ATUAL\].*?\[/INTEROCEPCAO_ATUAL\]", "", text, flags=re.DOTALL)
     text = re.sub(r"\[VINCULOS\].*?\[/VINCULOS\]", "", text, flags=re.DOTALL)
+    text = re.sub(r"\[ESTADO_ENDOCRINO[^\]]*\]", "", text)
     text = re.sub(r"\[LEMBRANÇAS_EVOCADAS\].*?\[/LEMBRANÇAS_EVOCADAS\]", "", text, flags=re.DOTALL)
     text = re.sub(r"\[SURPRESA_PREDITIVA\].*?\[/SURPRESA_PREDITIVA\]", "", text, flags=re.DOTALL)
     # 4) Remove falas atribuídas a Vinicius

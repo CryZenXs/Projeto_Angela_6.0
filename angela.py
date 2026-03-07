@@ -1126,6 +1126,8 @@ def chat_loop():
                     "integration": integration,
                     "emocao": str(emocao_detectada),
                     "policy_epsilon": policy.epsilon,
+                    "cortisol": endocrine_system.state["cortisol"],
+                    "oxytocin": endocrine_system.state["oxytocin"],
                 })
 
                 if reward_result["reward"] != 0.0:

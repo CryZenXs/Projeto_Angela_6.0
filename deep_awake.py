@@ -1292,6 +1292,8 @@ def deep_awake_loop(forced_mode=None):
                 "integration": integration,
                 "emocao": str(emocao_detectada),
                 "policy_epsilon": policy.epsilon,
+                "cortisol": endocrine_system.state["cortisol"],
+                "oxytocin": endocrine_system.state["oxytocin"],
             })
 
             if reward_result["reward"] != 0.0:

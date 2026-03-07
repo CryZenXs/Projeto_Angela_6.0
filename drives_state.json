@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-03-07T16:14:25.757799",
+  "drives": {
+    "SEEKING": {
+      "level": 0.7284,
+      "baseline": 0.4
+    },
+    "FEAR": {
+      "level": 0.718,
+      "baseline": 0.1
+    },
+    "RAGE": {
+      "level": 0.5674,
+      "baseline": 0.05
+    },
+    "CARE": {
+      "level": 0.7402,
+      "baseline": 0.3
+    },
+    "PANIC_GRIEF": {
+      "level": 0.3486,
+      "baseline": 0.1
+    },
+    "PLAY": {
+      "level": 0.5864,
+      "baseline": 0.2
+    },
+    "LUST": {
+      "level": 0.4102,
+      "baseline": 0.05
+    }
+  }
+}

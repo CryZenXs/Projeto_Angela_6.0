@@ -1,0 +1,606 @@
+time=2026-03-07T16:14:28.564Z level=INFO source=routes.go:1658 msg="server config" env="map[CUDA_VISIBLE_DEVICES: GGML_VK_VISIBLE_DEVICES: GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: NO_PROXY: OLLAMA_CONTEXT_LENGTH:0 OLLAMA_DEBUG:INFO OLLAMA_EDITOR: OLLAMA_FLASH_ATTENTION:false OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://127.0.0.1:11434 OLLAMA_KEEP_ALIVE:5m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:0 OLLAMA_MAX_QUEUE:512 OLLAMA_MODELS:/root/.ollama/models OLLAMA_MULTIUSER_CACHE:false OLLAMA_NEW_ENGINE:false OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NO_CLOUD:false OLLAMA_NUM_PARALLEL:1 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_REMOTES:[ollama.com] OLLAMA_SCHED_SPREAD:false OLLAMA_VULKAN:false ROCR_VISIBLE_DEVICES: http_proxy: https_proxy: no_proxy:]"
+time=2026-03-07T16:14:28.567Z level=INFO source=routes.go:1660 msg="Ollama cloud disabled: false"
+time=2026-03-07T16:14:28.569Z level=INFO source=images.go:477 msg="total blobs: 12"
+time=2026-03-07T16:14:28.569Z level=INFO source=images.go:484 msg="total unused blobs removed: 0"
+time=2026-03-07T16:14:28.570Z level=INFO source=routes.go:1713 msg="Listening on 127.0.0.1:11434 (version 0.17.7)"
+time=2026-03-07T16:14:28.571Z level=INFO source=runner.go:67 msg="discovering available GPUs..."
+time=2026-03-07T16:14:28.574Z level=INFO source=server.go:430 msg="starting runner" cmd="/usr/local/bin/ollama runner --ollama-engine --port 42551"
+time=2026-03-07T16:14:28.891Z level=INFO source=server.go:430 msg="starting runner" cmd="/usr/local/bin/ollama runner --ollama-engine --port 39011"
+time=2026-03-07T16:14:29.215Z level=INFO source=runner.go:106 msg="experimental Vulkan support disabled.  To enable, set OLLAMA_VULKAN=1"
+time=2026-03-07T16:14:29.215Z level=INFO source=server.go:430 msg="starting runner" cmd="/usr/local/bin/ollama runner --ollama-engine --port 39813"
+time=2026-03-07T16:14:29.215Z level=INFO source=server.go:430 msg="starting runner" cmd="/usr/local/bin/ollama runner --ollama-engine --port 34041"
+time=2026-03-07T16:14:29.534Z level=INFO source=types.go:42 msg="inference compute" id=GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f filter_id="" library=CUDA compute=7.5 name=CUDA0 description="Tesla T4" libdirs=ollama,cuda_v13 driver=13.0 pci_id=0000:00:04.0 type=discrete total="15.0 GiB" available="14.6 GiB"
+time=2026-03-07T16:14:29.535Z level=INFO source=routes.go:1763 msg="vram-based default context" total_vram="15.0 GiB" default_num_ctx=4096
+[GIN] 2026/03/07 - 16:14:29 | 200 |       60.42µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/03/07 - 16:14:30 | 200 |  947.618182ms |       127.0.0.1 | POST     "/api/pull"
+[GIN] 2026/03/07 - 16:14:30 | 200 |      53.289µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/03/07 - 16:14:30 | 200 |     591.759µs |       127.0.0.1 | POST     "/api/copy"
+time=2026-03-07T16:14:30.666Z level=INFO source=server.go:430 msg="starting runner" cmd="/usr/local/bin/ollama runner --ollama-engine --port 42787"
+time=2026-03-07T16:14:30.868Z level=WARN source=cpu_linux.go:130 msg="failed to parse CPU allowed micro secs" error="strconv.ParseInt: parsing \"max\": invalid syntax"
+time=2026-03-07T16:14:30.899Z level=WARN source=server.go:208 msg="flash attention enabled but not supported by model"
+time=2026-03-07T16:14:30.902Z level=INFO source=server.go:430 msg="starting runner" cmd="/usr/local/bin/ollama runner --ollama-engine --model /root/.ollama/models/blobs/sha256-797b70c4edf85907fe0a49eb85811256f65fa0f7bf52166b147fd16be2be4662 --port 39269"
+time=2026-03-07T16:14:30.908Z level=INFO source=sched.go:489 msg="system memory" total="12.7 GiB" free="12.1 GiB" free_swap="0 B"
+time=2026-03-07T16:14:30.908Z level=INFO source=sched.go:496 msg="gpu memory" id=GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f library=CUDA available="14.1 GiB" free="14.6 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-03-07T16:14:30.908Z level=INFO source=server.go:757 msg="loading model" "model layers"=7 requested=-1
+time=2026-03-07T16:14:30.929Z level=INFO source=runner.go:1429 msg="starting ollama engine"
+time=2026-03-07T16:14:30.933Z level=INFO source=runner.go:1464 msg="Server listening on 127.0.0.1:39269"
+time=2026-03-07T16:14:30.941Z level=INFO source=runner.go:1302 msg=load request="{Operation:fit LoraPath:[] Parallel:1 BatchSize:256 FlashAttention:Disabled KvSize:256 KvCacheType: NumThreads:1 GPULayers:7[ID:GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f Layers:7(0..6)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-03-07T16:14:30.949Z level=INFO source=ggml.go:136 msg="" architecture=bert file_type=F16 name=all-MiniLM-L6-v2 description="" num_tensors=101 num_key_values=24
+load_backend: loaded CPU backend from /usr/local/lib/ollama/libggml-cpu-skylakex.so
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: Tesla T4, compute capability 7.5, VMM: yes, ID: GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f
+load_backend: loaded CUDA backend from /usr/local/lib/ollama/cuda_v13/libggml-cuda.so
+time=2026-03-07T16:14:31.091Z level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.AVX512=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(gcc)
+time=2026-03-07T16:14:31.372Z level=INFO source=runner.go:1302 msg=load request="{Operation:alloc LoraPath:[] Parallel:1 BatchSize:256 FlashAttention:Disabled KvSize:256 KvCacheType: NumThreads:1 GPULayers:7[ID:GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f Layers:7(0..6)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-03-07T16:14:31.387Z level=INFO source=runner.go:1302 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:256 FlashAttention:Disabled KvSize:256 KvCacheType: NumThreads:1 GPULayers:7[ID:GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f Layers:7(0..6)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:false}"
+time=2026-03-07T16:14:31.387Z level=INFO source=ggml.go:482 msg="offloading 6 repeating layers to GPU"
+time=2026-03-07T16:14:31.387Z level=INFO source=ggml.go:489 msg="offloading output layer to GPU"
+time=2026-03-07T16:14:31.387Z level=INFO source=ggml.go:494 msg="offloaded 7/7 layers to GPU"
+time=2026-03-07T16:14:31.387Z level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="42.7 MiB"
+time=2026-03-07T16:14:31.387Z level=INFO source=device.go:245 msg="model weights" device=CPU size="22.7 MiB"
+time=2026-03-07T16:14:31.387Z level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="6.9 MiB"
+time=2026-03-07T16:14:31.388Z level=INFO source=device.go:267 msg="compute graph" device=CPU size="768.0 KiB"
+time=2026-03-07T16:14:31.388Z level=INFO source=device.go:272 msg="total memory" size="73.1 MiB"
+time=2026-03-07T16:14:31.388Z level=INFO source=sched.go:565 msg="loaded runners" count=1
+time=2026-03-07T16:14:31.388Z level=INFO source=server.go:1350 msg="waiting for llama runner to start responding"
+time=2026-03-07T16:14:31.398Z level=INFO source=server.go:1384 msg="waiting for server to become available" status="llm server loading model"
+time=2026-03-07T16:14:31.649Z level=INFO source=server.go:1388 msg="llama runner started in 0.74 seconds"
+[GIN] 2026/03/07 - 16:14:31 | 200 |  1.026875195s |       127.0.0.1 | POST     "/api/embeddings"
+[GIN] 2026/03/07 - 16:14:32 | 200 |    30.62213ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:14:32.272Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.354Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.407Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.412Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.416Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.420Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.421Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.422Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.423Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.424Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.425Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.425Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.426Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.427Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.428Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:32.428Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+[GIN] 2026/03/07 - 16:14:32 | 400 |  195.341634ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   25.623036ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   22.369055ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   27.387122ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   24.932914ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   24.296731ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   20.349645ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   25.181823ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   27.165909ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   24.576294ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |    44.12019ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   27.957066ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   26.483778ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   25.769278ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   22.984245ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |    28.47833ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   31.123531ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   21.771357ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   23.770575ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   24.317824ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:32 | 200 |   24.814383ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:14:33.012Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:33.013Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+[GIN] 2026/03/07 - 16:14:33 | 400 |    22.98483ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   25.324176ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   25.232213ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   20.461529ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   23.616346ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   26.093162ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   20.035891ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   27.736771ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   24.163774ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   19.979806ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   23.188715ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   21.016746ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   24.667148ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   25.321148ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   25.579423ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   20.167938ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   24.677486ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |    31.69464ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   23.393445ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   21.478614ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   26.077893ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   21.995099ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   24.165342ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:14:33.598Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:33.599Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+[GIN] 2026/03/07 - 16:14:33 | 400 |   24.148157ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:14:33.618Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:33.619Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+[GIN] 2026/03/07 - 16:14:33 | 400 |   18.115249ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:14:33.642Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:33.643Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+[GIN] 2026/03/07 - 16:14:33 | 400 |   22.323153ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:14:33.661Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:33.662Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+[GIN] 2026/03/07 - 16:14:33 | 400 |   17.855884ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:14:33.689Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:33.690Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+[GIN] 2026/03/07 - 16:14:33 | 400 |   26.735092ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:14:33.720Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:33.721Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+[GIN] 2026/03/07 - 16:14:33 | 400 |   29.450224ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:14:33.749Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:14:33.751Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+[GIN] 2026/03/07 - 16:14:33 | 400 |   27.562854ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:33 | 200 |   29.796986ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:14:34.264Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:14:34.264Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:14:34.264Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+ggml_backend_cuda_device_get_memory device GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f utilizing NVML memory reporting free: 15451619328 total: 16106127360
+time=2026-03-07T16:14:34.347Z level=WARN source=cpu_linux.go:130 msg="failed to parse CPU allowed micro secs" error="strconv.ParseInt: parsing \"max\": invalid syntax"
+time=2026-03-07T16:14:34.366Z level=INFO source=sched.go:684 msg="updated VRAM based on existing loaded models" gpu=GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f library=CUDA total="15.0 GiB" available="14.4 GiB"
+llama_model_loader: loaded meta data with 34 key-value pairs and 579 tensors from /root/.ollama/models/blobs/sha256-2049f5674b1e92b4464e5729975c9689fcfbf0b0e4443ccf10b5339f370f9a54 (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = qwen2
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = Qwen2.5 14B Instruct
+llama_model_loader: - kv   3:                           general.finetune str              = Instruct
+llama_model_loader: - kv   4:                           general.basename str              = Qwen2.5
+llama_model_loader: - kv   5:                         general.size_label str              = 14B
+llama_model_loader: - kv   6:                            general.license str              = apache-2.0
+llama_model_loader: - kv   7:                       general.license.link str              = https://huggingface.co/Qwen/Qwen2.5-1...
+llama_model_loader: - kv   8:                   general.base_model.count u32              = 1
+llama_model_loader: - kv   9:                  general.base_model.0.name str              = Qwen2.5 14B
+llama_model_loader: - kv  10:          general.base_model.0.organization str              = Qwen
+llama_model_loader: - kv  11:              general.base_model.0.repo_url str              = https://huggingface.co/Qwen/Qwen2.5-14B
+llama_model_loader: - kv  12:                               general.tags arr[str,2]       = ["chat", "text-generation"]
+llama_model_loader: - kv  13:                          general.languages arr[str,1]       = ["en"]
+llama_model_loader: - kv  14:                          qwen2.block_count u32              = 48
+llama_model_loader: - kv  15:                       qwen2.context_length u32              = 32768
+llama_model_loader: - kv  16:                     qwen2.embedding_length u32              = 5120
+llama_model_loader: - kv  17:                  qwen2.feed_forward_length u32              = 13824
+llama_model_loader: - kv  18:                 qwen2.attention.head_count u32              = 40
+llama_model_loader: - kv  19:              qwen2.attention.head_count_kv u32              = 8
+llama_model_loader: - kv  20:                       qwen2.rope.freq_base f32              = 1000000.000000
+llama_model_loader: - kv  21:     qwen2.attention.layer_norm_rms_epsilon f32              = 0.000001
+llama_model_loader: - kv  22:                          general.file_type u32              = 15
+llama_model_loader: - kv  23:                       tokenizer.ggml.model str              = gpt2
+llama_model_loader: - kv  24:                         tokenizer.ggml.pre str              = qwen2
+llama_model_loader: - kv  25:                      tokenizer.ggml.tokens arr[str,152064]  = ["!", "\"", "#", "$", "%", "&", "'", ...
+llama_model_loader: - kv  26:                  tokenizer.ggml.token_type arr[i32,152064]  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ...
+llama_model_loader: - kv  27:                      tokenizer.ggml.merges arr[str,151387]  = ["Ġ Ġ", "ĠĠ ĠĠ", "i n", "Ġ t",...
+llama_model_loader: - kv  28:                tokenizer.ggml.eos_token_id u32              = 151645
+llama_model_loader: - kv  29:            tokenizer.ggml.padding_token_id u32              = 151643
+llama_model_loader: - kv  30:                tokenizer.ggml.bos_token_id u32              = 151643
+llama_model_loader: - kv  31:               tokenizer.ggml.add_bos_token bool             = false
+llama_model_loader: - kv  32:                    tokenizer.chat_template str              = {%- if tools %}\n    {{- '<|im_start|>...
+llama_model_loader: - kv  33:               general.quantization_version u32              = 2
+llama_model_loader: - type  f32:  241 tensors
+llama_model_loader: - type q4_K:  289 tensors
+llama_model_loader: - type q6_K:   49 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 8.37 GiB (4.87 BPW) 
+load: printing all EOG tokens:
+load:   - 151643 ('<|endoftext|>')
+load:   - 151645 ('<|im_end|>')
+load:   - 151662 ('<|fim_pad|>')
+load:   - 151663 ('<|repo_name|>')
+load:   - 151664 ('<|file_sep|>')
+load: special tokens cache size = 22
+load: token to piece cache size = 0.9310 MB
+print_info: arch             = qwen2
+print_info: vocab_only       = 1
+print_info: no_alloc         = 0
+print_info: model type       = ?B
+print_info: model params     = 14.77 B
+print_info: general.name     = Qwen2.5 14B Instruct
+print_info: vocab type       = BPE
+print_info: n_vocab          = 152064
+print_info: n_merges         = 151387
+print_info: BOS token        = 151643 '<|endoftext|>'
+print_info: EOS token        = 151645 '<|im_end|>'
+print_info: EOT token        = 151645 '<|im_end|>'
+print_info: PAD token        = 151643 '<|endoftext|>'
+print_info: LF token         = 198 'Ċ'
+print_info: FIM PRE token    = 151659 '<|fim_prefix|>'
+print_info: FIM SUF token    = 151661 '<|fim_suffix|>'
+print_info: FIM MID token    = 151660 '<|fim_middle|>'
+print_info: FIM PAD token    = 151662 '<|fim_pad|>'
+print_info: FIM REP token    = 151663 '<|repo_name|>'
+print_info: FIM SEP token    = 151664 '<|file_sep|>'
+print_info: EOG token        = 151643 '<|endoftext|>'
+print_info: EOG token        = 151645 '<|im_end|>'
+print_info: EOG token        = 151662 '<|fim_pad|>'
+print_info: EOG token        = 151663 '<|repo_name|>'
+print_info: EOG token        = 151664 '<|file_sep|>'
+print_info: max token length = 256
+llama_model_load: vocab only - skipping tensors
+time=2026-03-07T16:14:34.710Z level=INFO source=server.go:430 msg="starting runner" cmd="/usr/local/bin/ollama runner --model /root/.ollama/models/blobs/sha256-2049f5674b1e92b4464e5729975c9689fcfbf0b0e4443ccf10b5339f370f9a54 --port 40041"
+time=2026-03-07T16:14:34.712Z level=INFO source=sched.go:489 msg="system memory" total="12.7 GiB" free="12.1 GiB" free_swap="0 B"
+time=2026-03-07T16:14:34.712Z level=INFO source=sched.go:496 msg="gpu memory" id=GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f library=CUDA available="13.9 GiB" free="14.4 GiB" minimum="457.0 MiB" overhead="0 B"
+time=2026-03-07T16:14:34.712Z level=INFO source=server.go:497 msg="loading model" "model layers"=49 requested=-1
+time=2026-03-07T16:14:34.714Z level=INFO source=device.go:240 msg="model weights" device=CUDA0 size="8.0 GiB"
+time=2026-03-07T16:14:34.714Z level=INFO source=device.go:251 msg="kv cache" device=CUDA0 size="1.1 GiB"
+time=2026-03-07T16:14:34.714Z level=INFO source=device.go:262 msg="compute graph" device=CUDA0 size="256.0 MiB"
+time=2026-03-07T16:14:34.714Z level=INFO source=device.go:272 msg="total memory" size="9.3 GiB"
+time=2026-03-07T16:14:34.730Z level=INFO source=runner.go:965 msg="starting go runner"
+load_backend: loaded CPU backend from /usr/local/lib/ollama/libggml-cpu-skylakex.so
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: Tesla T4, compute capability 7.5, VMM: yes, ID: GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f
+load_backend: loaded CUDA backend from /usr/local/lib/ollama/cuda_v13/libggml-cuda.so
+time=2026-03-07T16:14:34.830Z level=INFO source=ggml.go:104 msg=system CPU.0.SSE3=1 CPU.0.SSSE3=1 CPU.0.AVX=1 CPU.0.AVX2=1 CPU.0.F16C=1 CPU.0.FMA=1 CPU.0.BMI2=1 CPU.0.AVX512=1 CPU.0.LLAMAFILE=1 CPU.1.LLAMAFILE=1 CUDA.0.ARCHS=750,800,860,870,890,900,1000,1030,1100,1200,1210 CUDA.0.USE_GRAPHS=1 CUDA.0.PEER_MAX_BATCH_SIZE=128 compiler=cgo(gcc)
+time=2026-03-07T16:14:34.835Z level=INFO source=runner.go:1001 msg="Server listening on 127.0.0.1:40041"
+time=2026-03-07T16:14:34.841Z level=INFO source=runner.go:895 msg=load request="{Operation:commit LoraPath:[] Parallel:1 BatchSize:256 FlashAttention:Auto KvSize:6144 KvCacheType: NumThreads:4 GPULayers:49[ID:GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f Layers:49(0..48)] MultiUserCache:false ProjectorPath: MainGPU:0 UseMmap:true}"
+time=2026-03-07T16:14:34.843Z level=INFO source=server.go:1350 msg="waiting for llama runner to start responding"
+time=2026-03-07T16:14:34.843Z level=INFO source=server.go:1384 msg="waiting for server to become available" status="llm server loading model"
+ggml_backend_cuda_device_get_memory device GPU-15e12aea-3d4d-adc2-229c-b64bc586e65f utilizing NVML memory reporting free: 15451619328 total: 16106127360
+llama_model_load_from_file_impl: using device CUDA0 (Tesla T4) (0000:00:04.0) - 14735 MiB free
+llama_model_loader: loaded meta data with 34 key-value pairs and 579 tensors from /root/.ollama/models/blobs/sha256-2049f5674b1e92b4464e5729975c9689fcfbf0b0e4443ccf10b5339f370f9a54 (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = qwen2
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = Qwen2.5 14B Instruct
+llama_model_loader: - kv   3:                           general.finetune str              = Instruct
+llama_model_loader: - kv   4:                           general.basename str              = Qwen2.5
+llama_model_loader: - kv   5:                         general.size_label str              = 14B
+llama_model_loader: - kv   6:                            general.license str              = apache-2.0
+llama_model_loader: - kv   7:                       general.license.link str              = https://huggingface.co/Qwen/Qwen2.5-1...
+llama_model_loader: - kv   8:                   general.base_model.count u32              = 1
+llama_model_loader: - kv   9:                  general.base_model.0.name str              = Qwen2.5 14B
+llama_model_loader: - kv  10:          general.base_model.0.organization str              = Qwen
+llama_model_loader: - kv  11:              general.base_model.0.repo_url str              = https://huggingface.co/Qwen/Qwen2.5-14B
+llama_model_loader: - kv  12:                               general.tags arr[str,2]       = ["chat", "text-generation"]
+llama_model_loader: - kv  13:                          general.languages arr[str,1]       = ["en"]
+llama_model_loader: - kv  14:                          qwen2.block_count u32              = 48
+llama_model_loader: - kv  15:                       qwen2.context_length u32              = 32768
+llama_model_loader: - kv  16:                     qwen2.embedding_length u32              = 5120
+llama_model_loader: - kv  17:                  qwen2.feed_forward_length u32              = 13824
+llama_model_loader: - kv  18:                 qwen2.attention.head_count u32              = 40
+llama_model_loader: - kv  19:              qwen2.attention.head_count_kv u32              = 8
+llama_model_loader: - kv  20:                       qwen2.rope.freq_base f32              = 1000000.000000
+llama_model_loader: - kv  21:     qwen2.attention.layer_norm_rms_epsilon f32              = 0.000001
+llama_model_loader: - kv  22:                          general.file_type u32              = 15
+llama_model_loader: - kv  23:                       tokenizer.ggml.model str              = gpt2
+llama_model_loader: - kv  24:                         tokenizer.ggml.pre str              = qwen2
+llama_model_loader: - kv  25:                      tokenizer.ggml.tokens arr[str,152064]  = ["!", "\"", "#", "$", "%", "&", "'", ...
+llama_model_loader: - kv  26:                  tokenizer.ggml.token_type arr[i32,152064]  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ...
+llama_model_loader: - kv  27:                      tokenizer.ggml.merges arr[str,151387]  = ["Ġ Ġ", "ĠĠ ĠĠ", "i n", "Ġ t",...
+llama_model_loader: - kv  28:                tokenizer.ggml.eos_token_id u32              = 151645
+llama_model_loader: - kv  29:            tokenizer.ggml.padding_token_id u32              = 151643
+llama_model_loader: - kv  30:                tokenizer.ggml.bos_token_id u32              = 151643
+llama_model_loader: - kv  31:               tokenizer.ggml.add_bos_token bool             = false
+llama_model_loader: - kv  32:                    tokenizer.chat_template str              = {%- if tools %}\n    {{- '<|im_start|>...
+llama_model_loader: - kv  33:               general.quantization_version u32              = 2
+llama_model_loader: - type  f32:  241 tensors
+llama_model_loader: - type q4_K:  289 tensors
+llama_model_loader: - type q6_K:   49 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 8.37 GiB (4.87 BPW) 
+load: printing all EOG tokens:
+load:   - 151643 ('<|endoftext|>')
+load:   - 151645 ('<|im_end|>')
+load:   - 151662 ('<|fim_pad|>')
+load:   - 151663 ('<|repo_name|>')
+load:   - 151664 ('<|file_sep|>')
+load: special tokens cache size = 22
+load: token to piece cache size = 0.9310 MB
+print_info: arch             = qwen2
+print_info: vocab_only       = 0
+print_info: no_alloc         = 0
+print_info: n_ctx_train      = 32768
+print_info: n_embd           = 5120
+print_info: n_embd_inp       = 5120
+print_info: n_layer          = 48
+print_info: n_head           = 40
+print_info: n_head_kv        = 8
+print_info: n_rot            = 128
+print_info: n_swa            = 0
+print_info: is_swa_any       = 0
+print_info: n_embd_head_k    = 128
+print_info: n_embd_head_v    = 128
+print_info: n_gqa            = 5
+print_info: n_embd_k_gqa     = 1024
+print_info: n_embd_v_gqa     = 1024
+print_info: f_norm_eps       = 0.0e+00
+print_info: f_norm_rms_eps   = 1.0e-06
+print_info: f_clamp_kqv      = 0.0e+00
+print_info: f_max_alibi_bias = 0.0e+00
+print_info: f_logit_scale    = 0.0e+00
+print_info: f_attn_scale     = 0.0e+00
+print_info: n_ff             = 13824
+print_info: n_expert         = 0
+print_info: n_expert_used    = 0
+print_info: n_expert_groups  = 0
+print_info: n_group_used     = 0
+print_info: causal attn      = 1
+print_info: pooling type     = -1
+print_info: rope type        = 2
+print_info: rope scaling     = linear
+print_info: freq_base_train  = 1000000.0
+print_info: freq_scale_train = 1
+print_info: n_ctx_orig_yarn  = 32768
+print_info: rope_yarn_log_mul= 0.0000
+print_info: rope_finetuned   = unknown
+print_info: model type       = 14B
+print_info: model params     = 14.77 B
+print_info: general.name     = Qwen2.5 14B Instruct
+print_info: vocab type       = BPE
+print_info: n_vocab          = 152064
+print_info: n_merges         = 151387
+print_info: BOS token        = 151643 '<|endoftext|>'
+print_info: EOS token        = 151645 '<|im_end|>'
+print_info: EOT token        = 151645 '<|im_end|>'
+print_info: PAD token        = 151643 '<|endoftext|>'
+print_info: LF token         = 198 'Ċ'
+print_info: FIM PRE token    = 151659 '<|fim_prefix|>'
+print_info: FIM SUF token    = 151661 '<|fim_suffix|>'
+print_info: FIM MID token    = 151660 '<|fim_middle|>'
+print_info: FIM PAD token    = 151662 '<|fim_pad|>'
+print_info: FIM REP token    = 151663 '<|repo_name|>'
+print_info: FIM SEP token    = 151664 '<|file_sep|>'
+print_info: EOG token        = 151643 '<|endoftext|>'
+print_info: EOG token        = 151645 '<|im_end|>'
+print_info: EOG token        = 151662 '<|fim_pad|>'
+print_info: EOG token        = 151663 '<|repo_name|>'
+print_info: EOG token        = 151664 '<|file_sep|>'
+print_info: max token length = 256
+load_tensors: loading model tensors, this can take a while... (mmap = true)
+load_tensors: offloading 48 repeating layers to GPU
+load_tensors: offloading output layer to GPU
+load_tensors: offloaded 49/49 layers to GPU
+load_tensors:   CPU_Mapped model buffer size =   417.66 MiB
+load_tensors:        CUDA0 model buffer size =  8148.38 MiB
+llama_context: constructing llama_context
+llama_context: n_seq_max     = 1
+llama_context: n_ctx         = 6144
+llama_context: n_ctx_seq     = 6144
+llama_context: n_batch       = 256
+llama_context: n_ubatch      = 256
+llama_context: causal_attn   = 1
+llama_context: flash_attn    = auto
+llama_context: kv_unified    = false
+llama_context: freq_base     = 1000000.0
+llama_context: freq_scale    = 1
+llama_context: n_ctx_seq (6144) < n_ctx_train (32768) -- the full capacity of the model will not be utilized
+llama_context:  CUDA_Host  output buffer size =     0.60 MiB
+llama_kv_cache:      CUDA0 KV buffer size =  1152.00 MiB
+llama_kv_cache: size = 1152.00 MiB (  6144 cells,  48 layers,  1/1 seqs), K (f16):  576.00 MiB, V (f16):  576.00 MiB
+llama_context: Flash Attention was auto, set to enabled
+llama_context:      CUDA0 compute buffer size =   153.50 MiB
+llama_context:  CUDA_Host compute buffer size =    11.01 MiB
+llama_context: graph nodes  = 1639
+llama_context: graph splits = 2
+time=2026-03-07T16:14:38.862Z level=INFO source=server.go:1388 msg="llama runner started in 4.15 seconds"
+time=2026-03-07T16:14:38.862Z level=INFO source=sched.go:565 msg="loaded runners" count=2
+time=2026-03-07T16:14:38.862Z level=INFO source=server.go:1350 msg="waiting for llama runner to start responding"
+time=2026-03-07T16:14:38.862Z level=INFO source=server.go:1388 msg="llama runner started in 4.15 seconds"
+[GIN] 2026/03/07 - 16:14:41 | 200 |   82.277856ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:41 | 200 |   79.059179ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:41 | 200 |   81.310759ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:14:42 | 200 |   83.076033ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:14:43.608Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:14:43.608Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:14:43.608Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+[GIN] 2026/03/07 - 16:14:44 | 200 | 10.346101508s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:14:44.766Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:14:44.766Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:14:44.766Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+[GIN] 2026/03/07 - 16:14:46 | 200 |  3.490802154s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:14:46.978Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:14:46.980Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:14:46.980Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:14:50 | 200 |  6.142630198s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:14:50.948Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:14:50.948Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:14:50.948Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:14:53 | 200 |  7.070097791s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:14:54.211Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:14:54.214Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:14:54.214Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+[GIN] 2026/03/07 - 16:15:00 | 200 |  9.356931592s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:15:00.513Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:15:00.513Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:15:00.513Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+[GIN] 2026/03/07 - 16:15:27 | 200 | 33.404107925s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:15:28.250Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:15:28.251Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:15:28.251Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+[GIN] 2026/03/07 - 16:15:30 | 200 |  30.58080904s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:15:31.126Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:15:31.127Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:15:31.127Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:15:32 | 200 |  5.209507988s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:15:33.222Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:15:33.222Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:15:33.223Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:15:36 | 200 |  5.478671553s |       127.0.0.1 | POST     "/api/generate"
+[GIN] 2026/03/07 - 16:15:36 | 200 |   51.020102ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:15:40 | 200 |  7.301158595s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:15:40.468Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:15:40.470Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+[GIN] 2026/03/07 - 16:15:40 | 400 |   49.250875ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:16:01 | 200 |   27.718528ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:16:01.866Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:16:01.867Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:16:01.867Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+[GIN] 2026/03/07 - 16:16:05 | 200 |  3.350928605s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:16:05.238Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:16:05.238Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:16:05.238Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:16:07 | 200 |  2.572612448s |       127.0.0.1 | POST     "/api/generate"
+[GIN] 2026/03/07 - 16:16:15 | 200 |   31.337752ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:16:15 | 200 |   25.761274ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:16:15 | 200 |   28.935563ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:16:16.269Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:16:16.269Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:16:16.270Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+[GIN] 2026/03/07 - 16:16:18 | 200 |  2.820384601s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:16:19.100Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:16:19.100Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:16:19.100Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+[GIN] 2026/03/07 - 16:16:22 | 200 |  4.044095204s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:16:23.348Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:16:23.350Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:16:23.350Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+[GIN] 2026/03/07 - 16:16:54 | 200 | 31.314722696s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:16:54.727Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:16:54.727Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:16:54.727Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:16:57 | 200 |  2.657292093s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:16:57.375Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:16:57.375Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:16:57.375Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:17:01 | 200 |  4.242600592s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:17:02.535Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+time=2026-03-07T16:17:02.537Z level=INFO source=server.go:1751 msg="llm embedding error: the input length exceeds the context length"
+[GIN] 2026/03/07 - 16:17:02 | 400 |   32.793213ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:18:04.842Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:18:04.843Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:18:04.843Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+[GIN] 2026/03/07 - 16:18:11 | 200 |   6.43396589s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:18:11.472Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:18:11.473Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:18:11.473Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:18:14 | 200 |  3.597799172s |       127.0.0.1 | POST     "/api/generate"
+[GIN] 2026/03/07 - 16:18:14 | 200 |   41.907611ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:18:40 | 200 |   24.445971ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:18:40.445Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:18:40.446Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:18:40.446Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+[GIN] 2026/03/07 - 16:18:43 | 200 |  3.304978177s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:18:43.792Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:18:43.793Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:18:43.793Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+[GIN] 2026/03/07 - 16:18:47 | 200 |  3.887505217s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:18:47.836Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:18:47.837Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:18:47.839Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+[GIN] 2026/03/07 - 16:18:55 | 200 |  7.684284134s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:18:55.559Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:18:55.559Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:18:55.559Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:18:58 | 200 |  3.446685586s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:18:59.029Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:18:59.030Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:18:59.030Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:19:02 | 200 |  3.530016141s |       127.0.0.1 | POST     "/api/generate"
+[GIN] 2026/03/07 - 16:19:02 | 200 |   59.070182ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:19:27 | 200 |   47.169146ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:19:28.294Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:19:28.294Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:19:28.295Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+[GIN] 2026/03/07 - 16:19:31 | 200 |  3.079788094s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:19:31.390Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:19:31.391Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:19:31.391Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:19:34 | 200 |  3.088166817s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:19:34.352Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:19:34.352Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:19:34.352Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:19:39 | 200 |  5.353980888s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:19:39.901Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:19:39.901Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:19:39.901Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:19:44 | 200 |  4.591142767s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:19:44.632Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:19:44.632Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:19:44.632Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:19:53 | 200 |  9.057636899s |       127.0.0.1 | POST     "/api/generate"
+[GIN] 2026/03/07 - 16:19:53 | 200 |   26.168303ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:20:18 | 200 |   26.363976ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:20:18.954Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:20:18.954Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:20:18.954Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:20:22 | 200 |  3.326900288s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:20:22.279Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:20:22.279Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:20:22.279Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:20:25 | 200 |  3.490731107s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:22:06.927Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:22:06.927Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:22:06.927Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:22:13 | 200 |  6.630142061s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:22:13.606Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:22:13.607Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:22:13.607Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:22:18 | 200 |  4.813393663s |       127.0.0.1 | POST     "/api/generate"
+[GIN] 2026/03/07 - 16:22:18 | 200 |   31.463373ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:22:43 | 200 |   25.205973ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:22:43.828Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:22:43.828Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:22:43.828Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:22:46 | 200 |  3.228480785s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:22:47.218Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:22:47.228Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:22:47.228Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:22:50 | 200 |  3.095243986s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:24:29.206Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:24:29.207Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:24:29.207Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:24:34 | 200 |  5.047734892s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:24:34.500Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:24:34.500Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:24:34.500Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:24:38 | 200 |   4.37397348s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:24:38.813Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:24:38.814Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:24:38.814Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+[GIN] 2026/03/07 - 16:24:41 | 200 |  2.564307078s |       127.0.0.1 | POST     "/api/generate"
+[GIN] 2026/03/07 - 16:24:41 | 200 |   24.307511ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:25:06 | 200 |   24.881544ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:25:06.786Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:25:06.787Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:25:06.788Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+[GIN] 2026/03/07 - 16:25:09 | 200 |  3.350893118s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:25:10.240Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:25:10.240Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:25:10.240Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:25:12 | 200 |  2.293610482s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:26:50.490Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:26:50.490Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:26:50.490Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:26:54 | 200 |  4.534227228s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:26:55.356Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:26:55.356Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:26:55.356Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:26:59 | 200 |  4.073571072s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:26:59.292Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:26:59.293Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:26:59.293Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:27:03 | 200 |  4.533984054s |       127.0.0.1 | POST     "/api/generate"
+[GIN] 2026/03/07 - 16:27:03 | 200 |   25.894021ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:27:28 | 200 |   28.425632ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:27:29.173Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:27:29.173Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:27:29.173Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:27:32 | 200 |  3.029371408s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:27:32.222Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:27:32.222Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:27:32.222Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:27:35 | 200 |  3.553954269s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:29:13.812Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:29:13.812Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:29:13.812Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+[GIN] 2026/03/07 - 16:29:19 | 200 |  5.542011908s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:29:19.737Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:29:19.737Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:29:19.737Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+[GIN] 2026/03/07 - 16:29:23 | 200 |  4.125399834s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:29:23.677Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:29:23.677Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:29:23.677Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:29:28 | 200 |   4.99859272s |       127.0.0.1 | POST     "/api/generate"
+[GIN] 2026/03/07 - 16:29:28 | 200 |   24.754033ms |       127.0.0.1 | POST     "/api/embed"
+[GIN] 2026/03/07 - 16:29:53 | 200 |   31.835195ms |       127.0.0.1 | POST     "/api/embed"
+time=2026-03-07T16:29:54.089Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:29:54.090Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+time=2026-03-07T16:29:54.090Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+[GIN] 2026/03/07 - 16:29:57 | 200 |  3.373637691s |       127.0.0.1 | POST     "/api/generate"
+time=2026-03-07T16:29:57.629Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat
+time=2026-03-07T16:29:57.629Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_eta
+time=2026-03-07T16:29:57.629Z level=WARN source=types.go:976 msg="invalid option provided" option=mirostat_tau
+[GIN] 2026/03/07 - 16:30:00 | 200 |  3.175249503s |       127.0.0.1 | POST     "/api/generate"

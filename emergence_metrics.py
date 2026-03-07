@@ -159,6 +159,39 @@ class EmergenceMetrics:
         except Exception:
             return 0.0
 
+    def cortisol_trend(self, window: int = 50) -> float:
+        """
+        Inclinação (slope) do cortisol ao longo da janela.
+        """
+        try:
+            events = self._read_recent(window)
+            values = []
+            for ev in events:
+                c = ev.get("cortisol")
+                if c is not None:
+                    values.append(float(c))
+            return self._slope(values)
+        except Exception:
+            return 0.0
+
+    def cortisol_mean(self, window: int = 50) -> float:
+        """Média do cortisol na janela atual."""
+        try:
+            events = self._read_recent(window)
+            values = [float(ev["cortisol"]) for ev in events if "cortisol" in ev]
+            return sum(values) / len(values) if values else 0.0
+        except Exception:
+            return 0.0
+
+    def oxytocin_mean(self, window: int = 50) -> float:
+        """Média da ocitocina na janela atual."""
+        try:
+            events = self._read_recent(window)
+            values = [float(ev["oxytocin"]) for ev in events if "oxytocin" in ev]
+            return sum(values) / len(values) if values else 0.0
+        except Exception:
+            return 0.0
+
     # ── Resumo geral ─────────────────────────────────────────────
 
     def summary(self, window: int = 50) -> dict:
@@ -169,6 +202,9 @@ class EmergenceMetrics:
             "prediction_alignment": self.prediction_alignment(window),
             "damage_trend": self.damage_trend(window),
             "reward_trend": self.reward_trend(window),
+            "cortisol_mean": self.cortisol_mean(window),
+            "oxytocin_mean": self.oxytocin_mean(window),
+            "cortisol_trend": self.cortisol_trend(window),
             "phi_proxy": self.compute_phi_proxy(window),
         }
 

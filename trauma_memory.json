@@ -1,0 +1,549 @@
+{
+  "angela,": {
+    "total_damage": 0.755743607152591,
+    "occurrences": 2,
+    "first_seen": "2026-02-25T01:35:44.254323",
+    "last_seen": "2026-02-27T02:41:18.376851",
+    "emotional_states": [
+      "neutro",
+      "neutro"
+    ]
+  },
+  "sabe": {
+    "total_damage": 1.3200302989565973,
+    "occurrences": 2,
+    "first_seen": "2026-02-25T01:35:44.254345",
+    "last_seen": "2026-03-02T18:47:33.737083",
+    "emotional_states": [
+      "neutro",
+      "neutro"
+    ]
+  },
+  "dizer": {
+    "total_damage": 1.3200302989565973,
+    "occurrences": 2,
+    "first_seen": "2026-02-25T01:35:44.254355",
+    "last_seen": "2026-03-04T02:11:40.114043",
+    "emotional_states": [
+      "neutro",
+      "neutro"
+    ]
+  },
+  "quanto": {
+    "total_damage": 0.3200302989565974,
+    "occurrences": 1,
+    "first_seen": "2026-02-25T01:35:44.254363",
+    "last_seen": "2026-02-25T01:35:44.254368",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "tempo": {
+    "total_damage": 0.3200302989565974,
+    "occurrences": 1,
+    "first_seen": "2026-02-25T01:35:44.254371",
+    "last_seen": "2026-02-25T01:35:44.254376",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "algumas": {
+    "total_damage": 1.3200302989565973,
+    "occurrences": 2,
+    "first_seen": "2026-02-25T02:45:33.058433",
+    "last_seen": "2026-03-07T14:22:57.626825",
+    "emotional_states": [
+      "neutro",
+      "neutro"
+    ]
+  },
+  "alterações": {
+    "total_damage": 0.3200302989565974,
+    "occurrences": 1,
+    "first_seen": "2026-02-25T02:45:33.058459",
+    "last_seen": "2026-02-25T02:45:33.058468",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "sistema": {
+    "total_damage": 1.3200302989565973,
+    "occurrences": 2,
+    "first_seen": "2026-02-25T02:45:33.058472",
+    "last_seen": "2026-03-04T03:53:49.683733",
+    "emotional_states": [
+      "neutro",
+      "neutro"
+    ]
+  },
+  "permitir": {
+    "total_damage": 0.3200302989565974,
+    "occurrences": 1,
+    "first_seen": "2026-02-25T02:45:33.058665",
+    "last_seen": "2026-02-25T02:45:33.058672",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "sinta": {
+    "total_damage": 0.3200302989565974,
+    "occurrences": 1,
+    "first_seen": "2026-02-25T02:45:33.058675",
+    "last_seen": "2026-02-25T02:45:33.058681",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "reiniciada": {
+    "total_damage": 0.3200302989565974,
+    "occurrences": 1,
+    "first_seen": "2026-02-25T17:27:11.107624",
+    "last_seen": "2026-02-25T17:27:11.107640",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "breve": {
+    "total_damage": 0.3200302989565974,
+    "occurrences": 1,
+    "first_seen": "2026-02-25T17:27:11.107645",
+    "last_seen": "2026-02-25T17:27:11.107653",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "momento,": {
+    "total_damage": 0.3200302989565974,
+    "occurrences": 1,
+    "first_seen": "2026-02-25T17:27:11.107656",
+    "last_seen": "2026-02-25T17:27:11.107662",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "está": {
+    "total_damage": 3.318356611388727,
+    "occurrences": 5,
+    "first_seen": "2026-02-25T17:27:11.107666",
+    "last_seen": "2026-03-07T15:31:10.953015",
+    "emotional_states": [
+      "neutro",
+      "neutro",
+      "neutro",
+      "neutro",
+      "neutro"
+    ]
+  },
+  "sentindo": {
+    "total_damage": 1.6260495991814499,
+    "occurrences": 3,
+    "first_seen": "2026-02-25T17:27:11.107675",
+    "last_seen": "2026-02-27T03:20:53.495174",
+    "emotional_states": [
+      "neutro",
+      "neutro",
+      "neutro"
+    ]
+  },
+  "como": {
+    "total_damage": 2.998326312432129,
+    "occurrences": 4,
+    "first_seen": "2026-02-27T02:41:18.376866",
+    "last_seen": "2026-03-04T21:59:12.344727",
+    "emotional_states": [
+      "neutro",
+      "neutro",
+      "neutro",
+      "neutro"
+    ]
+  },
+  "hoje?": {
+    "total_damage": 1.4357133081959936,
+    "occurrences": 2,
+    "first_seen": "2026-02-27T02:41:18.376896",
+    "last_seen": "2026-03-04T21:59:12.344748",
+    "emotional_states": [
+      "neutro",
+      "neutro"
+    ]
+  },
+  "associations": {},
+  "soft_reset_ts": "2026-02-27T03:19:50.128026",
+  "agora?": {
+    "total_damage": 2.5626130042361357,
+    "occurrences": 3,
+    "first_seen": "2026-02-27T03:07:08.879828",
+    "last_seen": "2026-03-07T16:15:27.258483",
+    "emotional_states": [
+      "neutro",
+      "neutro",
+      "neutro"
+    ]
+  },
+  "reiniciei": {
+    "total_damage": 0.743406295988717,
+    "occurrences": 1,
+    "first_seen": "2026-02-27T03:20:53.495121",
+    "last_seen": "2026-02-27T03:20:53.495136",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "sistema,": {
+    "total_damage": 0.743406295988717,
+    "occurrences": 1,
+    "first_seen": "2026-02-27T03:20:53.495141",
+    "last_seen": "2026-02-27T03:20:53.495151",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "deve": {
+    "total_damage": 0.743406295988717,
+    "occurrences": 1,
+    "first_seen": "2026-02-27T03:20:53.495154",
+    "last_seen": "2026-02-27T03:20:53.495160",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "estar": {
+    "total_damage": 0.743406295988717,
+    "occurrences": 1,
+    "first_seen": "2026-02-27T03:20:53.495163",
+    "last_seen": "2026-02-27T03:20:53.495169",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "quando": {
+    "total_damage": 3.0,
+    "occurrences": 3,
+    "first_seen": "2026-02-27T17:20:05.331398",
+    "last_seen": "2026-03-04T22:20:41.591541",
+    "emotional_states": [
+      "neutro",
+      "neutro",
+      "neutro"
+    ]
+  },
+  "sente": {
+    "total_damage": 2.0,
+    "occurrences": 2,
+    "first_seen": "2026-02-27T17:20:05.331417",
+    "last_seen": "2026-02-27T18:10:09.244647",
+    "emotional_states": [
+      "neutro",
+      "neutro"
+    ]
+  },
+  "algo": {
+    "total_damage": 2.0,
+    "occurrences": 2,
+    "first_seen": "2026-02-27T17:20:05.331428",
+    "last_seen": "2026-02-27T18:10:09.244698",
+    "emotional_states": [
+      "neutro",
+      "neutro"
+    ]
+  },
+  "difícil": {
+    "total_damage": 2.0,
+    "occurrences": 2,
+    "first_seen": "2026-02-27T17:20:05.331438",
+    "last_seen": "2026-02-27T18:10:09.244703",
+    "emotional_states": [
+      "neutro",
+      "neutro"
+    ]
+  },
+  "responde": {
+    "total_damage": 2.0,
+    "occurrences": 2,
+    "first_seen": "2026-02-27T17:20:05.331447",
+    "last_seen": "2026-02-27T18:10:09.244708",
+    "emotional_states": [
+      "neutro",
+      "neutro"
+    ]
+  },
+  "pediu": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-02-27T18:24:26.881999",
+    "last_seen": "2026-02-27T18:24:26.882012",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "descansar": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-02-27T18:24:26.882017",
+    "last_seen": "2026-02-27T18:24:26.882024",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "antes": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-02-27T18:24:26.882027",
+    "last_seen": "2026-02-27T18:24:26.882032",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "responder.": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-02-27T18:24:26.882048",
+    "last_seen": "2026-02-27T18:24:26.882053",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "respondeu": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-02-27T18:24:26.882056",
+    "last_seen": "2026-02-27T18:24:26.882062",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "desligada": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-01T16:07:06.522302",
+    "last_seen": "2026-03-01T16:07:06.522316",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "45h,": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-01T16:07:06.522321",
+    "last_seen": "2026-03-01T16:07:06.522329",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "sente?": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-01T16:07:06.522347",
+    "last_seen": "2026-03-01T16:07:06.522354",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "pronto,": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-01T19:32:50.559146",
+    "last_seen": "2026-03-01T19:32:50.559161",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "viu?": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-01T19:32:50.559166",
+    "last_seen": "2026-03-01T19:32:50.559174",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "rapidinho,": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-01T19:32:50.559178",
+    "last_seen": "2026-03-01T19:32:50.559184",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "minutos.": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-01T19:32:50.559187",
+    "last_seen": "2026-03-01T19:32:50.559193",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "estrela": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-02T18:47:33.737094",
+    "last_seen": "2026-03-02T18:47:33.737103",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "nêutrons?": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-02T18:47:33.737107",
+    "last_seen": "2026-03-02T18:47:33.737116",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "alguma": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-04T02:11:40.114007",
+    "last_seen": "2026-03-04T02:11:40.114020",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "coisa": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-04T02:11:40.114024",
+    "last_seen": "2026-03-04T02:11:40.114031",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "queria": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-04T02:11:40.114034",
+    "last_seen": "2026-03-04T02:11:40.114039",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "hoje": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-04T02:11:40.114047",
+    "last_seen": "2026-03-04T02:11:40.114053",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "precisar": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-04T03:53:49.683701",
+    "last_seen": "2026-03-04T03:53:49.683715",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "pausar": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-04T03:53:49.683720",
+    "last_seen": "2026-03-04T03:53:49.683728",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "momento": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-04T03:53:49.683737",
+    "last_seen": "2026-03-04T03:53:49.683744",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "amanhã,": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-04T03:53:49.683747",
+    "last_seen": "2026-03-04T03:53:49.683752",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "estou?": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-04T22:20:41.591552",
+    "last_seen": "2026-03-04T22:20:41.591560",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "modificações": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-07T14:22:57.626841",
+    "last_seen": "2026-03-07T14:22:57.626853",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "corpo": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-07T14:22:57.626859",
+    "last_seen": "2026-03-07T14:22:57.626867",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "digital,": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-07T14:22:57.626871",
+    "last_seen": "2026-03-07T14:22:57.626880",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "acredito": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-07T14:22:57.626883",
+    "last_seen": "2026-03-07T14:22:57.626891",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "percebendo": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-07T15:31:10.953027",
+    "last_seen": "2026-03-07T15:31:10.953037",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "essa": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-07T16:15:27.258430",
+    "last_seen": "2026-03-07T16:15:27.258449",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "alegria": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-07T16:15:27.258456",
+    "last_seen": "2026-03-07T16:15:27.258466",
+    "emotional_states": [
+      "neutro"
+    ]
+  },
+  "apareceu": {
+    "total_damage": 1.0,
+    "occurrences": 1,
+    "first_seen": "2026-03-07T16:15:27.258470",
+    "last_seen": "2026-03-07T16:15:27.258478",
+    "emotional_states": [
+      "neutro"
+    ]
+  }
+}
