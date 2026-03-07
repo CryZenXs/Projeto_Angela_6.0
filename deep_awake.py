@@ -766,7 +766,7 @@ def deep_awake_loop(forced_mode=None):
         endocrine_header = ""
         sensation_endo = endocrine_system.get_interoceptive_sensation()
         if sensation_endo:
-            endocrine_header = f"[ESTADO_QUIMICO]\n{sensation_endo}\n[/ESTADO_QUIMICO]\n"
+            endocrine_header = f"{sensation_endo}\n"
 
         # ── Circumplex header: injeta estado afetivo contínuo no prompt ──────
         circumplex_header = ""

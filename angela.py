@@ -571,7 +571,7 @@ def chat_loop():
             endocrine_header = ""
             sensation_endo = endocrine_system.get_interoceptive_sensation()
             if sensation_endo:
-                endocrine_header = f"[ESTADO_QUIMICO]\n{sensation_endo}\n[/ESTADO_QUIMICO]\n"
+                endocrine_header = f"{sensation_endo}\n"
 
             # ── Theory of Mind (Frith & Frith 2006) ────────────────────────
             # Infere estado mental de Vinicius: emoção aparente, intenção e necessidade

@@ -796,6 +796,9 @@ def run_sleep_cycle(
     Executa ciclo completo: NREM → REM.
     Retorna dict com todos os resultados para display.
     """
+    from endocrine import EndocrineSystem
+    endocrine = EndocrineSystem()
+
     # ── Fase Episódica: consolida eventos específicos de alto impacto ────────
     # Roda ANTES do NREM para que episódios recentes estejam disponíveis
     print("📖 [EPISÓDICO] Consolidando eventos de alto impacto...")
@@ -841,6 +844,12 @@ def run_sleep_cycle(
             print(f"   🔄 Reconsolidação: {perspectiva[:100]}...")
     if rem_result.get("cross_connections"):
         print(f"   🔗 {len(rem_result['cross_connections'])} conexão(ões) cruzada(s)")
+
+    # Atualiza o endócrino aplicando o decaimento massivo de cortisol que o sono proporciona
+    if drive_system:
+        drives_snapshot = {name: obj.level for name, obj in drive_system.drives.items()}
+        endocrine.update(drives_snapshot, friction_damage, is_sleeping=True)
+        print(f"   🧪 Limpeza endócrina: Cortisol {endocrine.state['cortisol']:.2f}")
 
     return {
         "nrem":           nrem_result,

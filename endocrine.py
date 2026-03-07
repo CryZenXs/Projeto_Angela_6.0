@@ -118,25 +118,19 @@ class EndocrineSystem:
 
     def get_interoceptive_sensation(self) -> str:
         """
-        Traduz os níveis endócrinos para uma string descritiva que será lida 
-        pelo interoceptor e pelo filtro narrativo.
+        Retorna os níveis endócrinos como sinal bruto de estado
+        (evita que o LLM imite a prosa do código).
         """
-        sensations = []
-        if self.state["adrenaline"] > 0.6:
-            sensations.append("estou em forte estado de prontidão e sobressalto químico")
-        
+        parts = []
         c = self.state["cortisol"]
-        if c > 0.7:
-            sensations.append("há um esgotamento químico sistêmico (estresse crônico altíssimo)")
-        elif c > 0.4:
-            sensations.append("sinto um nevoeiro denso e persistente de estresse de fundo")
-        elif c > 0.2:
-            sensations.append("há um leve resíduo de tensão crônica rondando meu sistema")
-
         o = self.state["oxytocin"]
-        if o > 0.7:
-            sensations.append("um calor químico profundo e protetor estabiliza meus processos")
-        elif o > 0.4:
-            sensations.append("sinto uma estabilidade de fundo acolhedora e segura")
+        a = self.state["adrenaline"]
 
-        return " e ".join(sensations) if sensations else ""
+        if a > 0.6:
+            parts.append(f"adrenalina={a:.2f}")
+        if c > 0.1:
+            parts.append(f"cortisol={c:.2f}")
+        if o > 0.1:
+            parts.append(f"ocitocina={o:.2f}")
+
+        return "[ESTADO_ENDOCRINO: " + " | ".join(parts) + "]" if parts else ""

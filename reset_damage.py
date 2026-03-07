@@ -10,13 +10,14 @@ from datetime import datetime
 DAMAGE_FILE = "friction_damage.persistent"
 AUDIT_LOG = "damage_resets.log"
 
-def reset_damage(level=0.0, reason="manual_reset"):
+def reset_damage(level=0.0, reason="manual_reset", reset_endocrine=False):
     """
     Reseta damage para nível especificado.
     
     Args:
         level: Novo valor de damage (0.0 a 1.0)
         reason: Motivo do reset (para auditoria)
+        reset_endocrine: Se deve resetar também endocrine_state.json
     """
     if not 0.0 <= level <= 1.0:
         print(f"❌ Erro: level deve estar entre 0.0 e 1.0 (recebido: {level})")
@@ -67,11 +68,28 @@ def reset_damage(level=0.0, reason="manual_reset"):
             f.write(f"{datetime.now().isoformat()} | RESET | "
                    f"damage: {old_damage:.4f} → {level:.4f} | "
                    f"load: {old_load:.4f} → 0.0 | "
-                   f"reason: {reason}\n")
+                   f"reason: {reason}"
+                   f"{' | endocrine: RESET' if reset_endocrine else ''}\n")
         print(f"📝 Reset registrado em {AUDIT_LOG}")
     except Exception:
         pass
     
+    if reset_endocrine:
+        endocrine_file = "endocrine_state.json"
+        endo_data = {
+            "cortisol": 0.0,
+            "oxytocin": 0.0,
+            "adrenaline": 0.0,
+            "last_damage": float(level),
+            "last_update": datetime.now().isoformat()
+        }
+        try:
+            with open(endocrine_file, "w", encoding="utf-8") as f:
+                json.dump(endo_data, f, ensure_ascii=False, indent=2)
+            print("🧪 Estado endócrino (endocrine_state.json) resetado com sucesso!")
+        except Exception as e:
+            print(f"❌ Erro ao resetar endócrino: {e}")
+            
     return True
 
 def show_current_state():
@@ -130,13 +148,19 @@ Exemplos:
         default="manual_reset",
         help="Motivo do reset (para auditoria)"
     )
+
+    parser.add_argument(
+        "--reset-endocrine",
+        action="store_true",
+        help="Zera também endocrine_state.json"
+    )
     
     args = parser.parse_args()
     
     if args.show:
         show_current_state()
     elif args.level is not None:
-        reset_damage(args.level, args.reason)
+        reset_damage(args.level, args.reason, args.reset_endocrine)
     else:
         parser.print_help()
         print("\n" + "="*60)
