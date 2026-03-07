@@ -90,15 +90,34 @@ def episodic_consolidation(
         if not novos:
             return result
 
-        # Limita por ciclo
-        novos = novos[:_EPISODIC_MAX_POR_CICLO]
+        # Limite dinâmico: backlog grande → processa mais por ciclo
+        backlog = len(novos)
+        if backlog >= 9:
+            limite_ciclo = 9
+        elif backlog >= 6:
+            limite_ciclo = 6
+        else:
+            limite_ciclo = _EPISODIC_MAX_POR_CICLO  # 3, comportamento normal
+        novos = novos[:limite_ciclo]
 
         entradas = []
+        contexto_acumulado = []  # resumos dos episódios já consolidados neste ciclo
+
         for mem in novos:
-            entrada = _consolidar_episodio(mem, generate_fn, friction_damage)
+            entrada = _consolidar_episodio(
+                mem, generate_fn, friction_damage,
+                contexto_ciclo=contexto_acumulado,
+            )
             if entrada:
                 entradas.append(entrada)
                 ja_consolidados.add(mem.get("ts", ""))
+                resumo = entrada.get("resumo", "")
+                if resumo:
+                    contexto_acumulado.append({
+                        "ts":     mem.get("ts", ""),
+                        "emocao": mem.get("emocao", ""),
+                        "resumo": resumo[:150],
+                    })
 
         if entradas:
             _append_to_autobio(entradas)
@@ -114,23 +133,67 @@ def episodic_consolidation(
     return result
 
 
+def _get_last_successful_consolidation_ts() -> Optional[str]:
+    """
+    Lê sleep_consolidation.jsonl e retorna o timestamp da entrada mais recente
+    com fase em ("EPISODICO", "NREM", "REM", "EPISODICO_RETROATIVO").
+
+    Retorna None se o arquivo não existir, estiver vazio, ou não contiver
+    nenhuma entrada das fases esperadas — o chamador usa fallback de 48h.
+    """
+    try:
+        if not os.path.exists(CONSOLIDATION_LOG):
+            return None
+        last_ts = None
+        with open(CONSOLIDATION_LOG, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                    fase = entry.get("fase", "")
+                    if fase in ("EPISODICO", "NREM", "REM", "EPISODICO_RETROATIVO"):
+                        ts = entry.get("ts", "")
+                        if ts and (last_ts is None or ts > last_ts):
+                            last_ts = ts
+                except Exception:
+                    continue
+        return last_ts
+    except Exception:
+        return None
+
+
 def _buscar_episodios_candidatos(mem_index, janela_horas: Optional[float] = None) -> list:
     """
     Busca memórias de diálogo real com:
     - tipo = "dialogo" (não ciclos autônomos)
     - intensidade >= threshold
-    - dentro da janela configurada (padrão: _EPISODIC_WINDOW_HORAS = 48h)
+    - dentro da janela configurada
 
-    janela_horas: quando fornecido, substitui _EPISODIC_WINDOW_HORAS. Útil para
-    consolidação retroativa de períodos específicos via consolidar_periodo.py.
+    Prioridade de janela_inicio:
+    1. janela_horas explícito → calcula a partir de now() (retrocompatível;
+       usado por consolidar_periodo.py e chamadas manuais)
+    2. Último timestamp de consolidação bem-sucedida → cobre exatamente o
+       período não processado (janela dinâmica, robusta a downtime do Colab)
+    3. Fallback: _EPISODIC_WINDOW_HORAS = 48h a partir de now()
 
     Ordena por intensidade descendente.
     """
     candidatos = []
     try:
         from datetime import timedelta
-        horas_efetivas = janela_horas if janela_horas is not None else _EPISODIC_WINDOW_HORAS
-        janela_inicio = (datetime.now() - timedelta(hours=horas_efetivas)).isoformat()
+        if janela_horas is not None:
+            # Explícito tem precedência — retrocompatível com consolidar_periodo.py
+            janela_inicio = (datetime.now() - timedelta(hours=janela_horas)).isoformat()
+        else:
+            last_consolidation = _get_last_successful_consolidation_ts()
+            if last_consolidation:
+                # Âncora dinâmica: cobre exatamente o gap desde o último repouso
+                janela_inicio = last_consolidation
+            else:
+                # Nunca houve consolidação → fallback padrão
+                janela_inicio = (datetime.now() - timedelta(hours=_EPISODIC_WINDOW_HORAS)).isoformat()
 
         rows = mem_index._conn.execute(
             "SELECT id, ts, conteudo, resposta, emocao, intensidade, tipo "
@@ -157,21 +220,46 @@ def _buscar_episodios_candidatos(mem_index, janela_horas: Optional[float] = None
     return candidatos
 
 
-def _consolidar_episodio(mem: dict, generate_fn, friction_damage: float) -> Optional[dict]:
+def _consolidar_episodio(
+    mem: dict,
+    generate_fn,
+    friction_damage: float,
+    contexto_ciclo: list = None,
+) -> Optional[dict]:
     """
     Gera entrada autobiográfica narrativa para um evento específico.
     Usa LLM para criar resumo íntimo em 1-2 frases, ou fallback estruturado.
+
+    contexto_ciclo: lista de dicts {ts, emocao, resumo} dos episódios já
+    consolidados neste ciclo. Quando não vazio, é injetado no prompt para que
+    o LLM gere entradas complementares, não repetitivas.
     """
-    conteudo  = mem.get("conteudo", "")
-    resposta  = mem.get("resposta", "")
-    emocao    = mem.get("emocao", "neutro")
+    conteudo    = mem.get("conteudo", "")
+    resposta    = mem.get("resposta", "")
+    emocao      = mem.get("emocao", "neutro")
     intensidade = mem.get("intensidade", 0.0)
-    ts        = mem.get("ts", "")
+    ts          = mem.get("ts", "")
 
     resumo = ""
     if generate_fn and friction_damage < 0.4 and (conteudo or resposta):
         try:
+            # Bloco de contexto acumulado (só injetado quando há episódios anteriores)
+            contexto_bloco = ""
+            if contexto_ciclo:
+                linhas = "\n".join(
+                    f"{ep['ts'][:19]} [{ep['emocao']}]: {ep['resumo']}"
+                    for ep in contexto_ciclo
+                )
+                contexto_bloco = (
+                    f"[EPISÓDIOS JÁ CONSOLIDADOS NESTE CICLO]\n"
+                    f"{linhas}\n"
+                    f"[FIM DO CONTEXTO]\n"
+                    f"Gere uma entrada autobiográfica para o episódio atual que seja "
+                    f"complementar ao que já foi registrado acima, sem repetir o que já foi dito.\n\n"
+                )
+
             prompt = (
+                f"{contexto_bloco}"
                 f"Durante uma conversa com Vinicius, isso aconteceu:\n"
                 f"Vinicius disse: '{conteudo[:200]}'\n"
                 f"Eu respondi: '{resposta[:200]}'\n"
